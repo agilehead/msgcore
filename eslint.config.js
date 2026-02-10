@@ -103,6 +103,20 @@ export default typescript.config(
     },
   },
 
+  // SQLite repositories - allow Tinqer type hint pattern
+  {
+    files: ["**/repositories/sqlite/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+
   // Tests - relaxed rules for test mocks and fixtures
   {
     files: ["**/tests/**/*.ts", "**/*.test.ts", "**/*.spec.ts"],

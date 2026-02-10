@@ -13,10 +13,10 @@
     "start": "./scripts/start.sh",
     "test": "cd node/packages/msgcore-server && npm test",
     "test:grep": "cd node/packages/msgcore-server && npm run test:grep",
-    "migrate:latest": "knex migrate:latest --knexfile knexfile.js",
-    "migrate:rollback": "knex migrate:rollback --knexfile knexfile.js",
-    "migrate:status": "knex migrate:status --knexfile knexfile.js",
-    "migrate:make": "knex migrate:make --knexfile knexfile.js"
+    "migrate:msgcore:latest": "knex migrate:latest --knexfile database/msgcore/knexfile.js",
+    "migrate:msgcore:rollback": "knex migrate:rollback --knexfile database/msgcore/knexfile.js",
+    "migrate:msgcore:status": "knex migrate:status --knexfile database/msgcore/knexfile.js",
+    "migrate:msgcore:make": "knex migrate:make --knexfile database/msgcore/knexfile.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

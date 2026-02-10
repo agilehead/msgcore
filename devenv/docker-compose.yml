@@ -26,6 +26,9 @@ services:
   msgcore:
     image: msgcore:latest
     container_name: msgcore
+    depends_on:
+      msgcore-migrations:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:5007:5007"
     env_file:

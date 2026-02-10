@@ -32,17 +32,17 @@ Thumbs.db
 *.swp
 *.swo
 
-# Task management
-.todos/
-.analysis/
-
 # Test artifacts
 .tests/
 .nyc_output/
 coverage/
 
-# Docker devenv data
-devenv/data/
-
 # Generated files
 src/generated/
+
+# Task management
+.todos/
+.analysis/
+
+# Docker devenv data
+devenv/data/

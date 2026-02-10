@@ -10,10 +10,10 @@ This document outlines the coding standards and patterns used throughout the Msg
 
 ```typescript
 // Good - Pure function with explicit dependencies
-export function createConversation(
+export async function createConversation(
   db: SQLiteDatabase,
   data: CreateConversationData,
-): ConversationRow {
+): Promise<Result<ConversationRow>> {
   // Implementation
 }
 
@@ -21,23 +21,57 @@ export function createConversation(
 export class ConversationService {
   constructor(private db: SQLiteDatabase) {}
 
-  createConversation(data: CreateConversationData): ConversationRow {
+  async createConversation(data: CreateConversationData): Promise<ConversationRow> {
     // This should be a function, not a class method
   }
 }
 ```
 
-### 2. Explicit Error Handling
+### 2. Explicit Error Handling with Result Types
 
-Use explicit error checks. Throw GraphQL errors in resolvers for user-facing errors.
+Use `Result<T>` for all operations that can fail. Never throw exceptions for expected errors.
 
 ```typescript
-// Good - Explicit null checks
-const conversation = conversationRepo.findById(id);
-if (conversation === null) {
-  throw new GraphQLError("Conversation not found");
+// Result type definition (in types.ts)
+export type Result<T, E = Error> = { success: true; data: T } | { success: false; error: E };
+
+// Good - Using Result type
+export async function findConversation(db: SQLiteDatabase, id: string): Promise<Result<ConversationRow>> {
+  try {
+    const rows = executeSelect(
+      db,
+      schema,
+      (q, p) =>
+        q
+          .from("conversation")
+          .where((c) => c.id === p.id)
+          .select((c) => ({ ...c }))
+          .take(1),
+      { id }
+    );
+
+    if (rows.length === 0) {
+      return {
+        success: false,
+        error: new Error("Conversation not found"),
+      };
+    }
+
+    return { success: true, data: rows[0] as unknown as ConversationRow };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
 }
-return conversation;
+
+// Bad - Throwing exceptions
+export async function findConversation(db: SQLiteDatabase, id: string): Promise<ConversationRow> {
+  const rows = executeSelect(/* ... */);
+  if (rows.length === 0) throw new Error("Conversation not found");
+  return rows[0];
+}
 ```
 
 ### 3. Database Patterns with Tinqer
@@ -66,28 +100,80 @@ export function findById(db: SQLiteDatabase, id: string): ConversationRow | null
 
   return rows.length > 0 ? (rows[0] as unknown as ConversationRow) : null;
 }
+
+// Bad - Raw SQL
+export function findById(db: SQLiteDatabase, id: string): ConversationRow | null {
+  return db.prepare(`SELECT * FROM conversation WHERE id = ?`).get(id);
+}
+```
+
+#### DbRow Types
+
+All database types must exactly mirror the database schema with snake_case:
+
+```typescript
+// Database schema types (snake_case)
+type ConversationRow = {
+  id: string;
+  context_type: string | null;
+  context_id: string | null;
+  title: string | null;
+  created_by: string;
+  last_message_at: string;
+  created_at: string;
+};
+
+type MessageRow = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  body: string;
+  metadata: string | null;
+  reply_to: string | null;
+  created_at: string;
+};
+
+type UserActivityRow = {
+  user_id: string;
+  conversation_id: string;
+  last_seen_at: string;
+};
 ```
 
 #### Repository Pattern
 
-Implement repositories as functional types:
+Implement repositories as functional interfaces:
 
 ```typescript
-// Repository type
+// Repository interface
 export type ConversationRepository = {
-  create: (data: CreateConversationData) => ConversationRow;
-  findById: (id: string) => ConversationRow | null;
-  findByUserId: (userId: string, options: FindOptions) => { rows: ConversationRow[]; totalCount: number };
+  create: (data: CreateConversationData) => Promise<Result<ConversationRow>>;
+  findById: (id: string) => Promise<Result<ConversationRow>>;
+  findByUserId: (userId: string, options: FindOptions) => Promise<Result<{ rows: ConversationRow[]; totalCount: number }>>;
 };
 
 // Repository implementation
 export function createConversationRepository(db: SQLiteDatabase): ConversationRepository {
   return {
-    create: (data) => {
+    create: async (data) => {
       // Tinqer insert implementation
     },
-    findById: (id) => {
-      // Tinqer select implementation
+    findById: async (id) => {
+      const rows = executeSelect(
+        db,
+        schema,
+        (q, p) =>
+          q
+            .from("conversation")
+            .where((c) => c.id === p.id)
+            .select((c) => ({ ...c }))
+            .take(1),
+        { id }
+      );
+
+      return rows.length > 0
+        ? { success: true, data: rows[0] as unknown as ConversationRow }
+        : { success: false, error: new Error("Conversation not found") };
     },
     // ... other methods
   };
@@ -172,53 +258,231 @@ type ConversationRow = {
   last_message_at: string;
   created_at: string;
 };
+
+type MessageRow = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  body: string;
+  metadata: string | null;
+  reply_to: string | null;
+  created_at: string;
+};
+
+// Use interface only for extensible contracts or declaration merging
 ```
 
 #### Strict Equality Only
 
 **CRITICAL**: Always use strict equality operators (`===` and `!==`). Never use loose equality (`==` or `!=`).
 
+```typescript
+// Good - Strict equality
+if (value === null) { ... }
+if (value !== undefined) { ... }
+if (conversation !== null && conversation !== undefined) { ... }
+
+// Bad - Loose equality (BANNED)
+if (value == null) { ... }
+if (value != undefined) { ... }
+```
+
 #### Avoid `any`
 
-Never use `any`. Use `unknown` if type is truly unknown.
+Never use `any`. Use `unknown` if type is truly unknown:
+
+```typescript
+// Good
+function parseJSON(content: string): unknown {
+  try {
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+// Bad
+function parseJSON(content: any): any {
+  return JSON.parse(content);
+}
+```
 
 ### 7. Async/Await Pattern
 
-Always use async/await instead of promise chains.
+Always use async/await instead of promises:
+
+```typescript
+// Good
+export async function getConversationMessages(
+  repos: Repositories,
+  conversationId: string,
+): Promise<Result<MessageRow[]>> {
+  const convResult = await repos.conversations.findById(conversationId);
+  if (!convResult.success) {
+    return convResult;
+  }
+
+  const messagesResult = await repos.messages.findByConversationId(conversationId);
+  return messagesResult;
+}
+
+// Bad - Promise chains
+export function getConversationMessages(
+  repos: Repositories,
+  conversationId: string,
+): Promise<Result<MessageRow[]>> {
+  return repos.conversations.findById(conversationId).then((convResult) => {
+    if (!convResult.success) {
+      return convResult;
+    }
+    return repos.messages.findByConversationId(conversationId);
+  });
+}
+```
 
 ### 8. GraphQL Resolver Patterns
 
 ```typescript
+// Good - Proper error handling with Result types
 export const conversationResolvers = {
   Query: {
-    conversation: (_parent: unknown, args: { id: string }, context: Context) => {
-      const conv = context.repos.conversations.findById(args.id);
-      if (conv === null) {
-        throw new GraphQLError("Conversation not found");
+    conversation: async (_parent: unknown, args: { id: string }, context: Context) => {
+      const result = await context.repos.conversations.findById(args.id);
+
+      if (!result.success) {
+        throw new GraphQLError(result.error.message);
       }
+
       // Verify caller is a participant
-      const participant = context.repos.conversations.findParticipant(args.id, context.userId);
+      const participant = await context.repos.conversations.findParticipant(args.id, context.userId);
       if (participant === null) {
         throw new GraphQLError("Not a participant");
       }
-      return conv;
+
+      return result.data;
+    },
+  },
+  Mutation: {
+    sendMessage: async (
+      _parent: unknown,
+      args: { input: SendMessageInput },
+      context: Context,
+    ) => {
+      const result = await context.repos.messages.create(args.input);
+
+      if (!result.success) {
+        throw new GraphQLError(result.error.message);
+      }
+
+      return result.data;
     },
   },
 };
 ```
 
-### 9. Security Patterns
+### 9. Documentation
+
+Add JSDoc comments for exported functions:
+
+```typescript
+/**
+ * Creates a new conversation with the specified participants.
+ *
+ * @param repos - Repository instances
+ * @param data - Conversation creation data including participants
+ * @returns Result containing the created conversation or an error
+ */
+export async function createConversation(
+  repos: Repositories,
+  data: CreateConversationData,
+): Promise<Result<ConversationRow>> {
+  // Implementation
+}
+```
+
+### 10. Testing
+
+```typescript
+describe("Conversation Repository", () => {
+  let db: SQLiteDatabase;
+  let conversationRepo: ConversationRepository;
+
+  beforeEach(async () => {
+    db = await createTestDatabase();
+    const repos = createRepositories(db);
+    conversationRepo = repos.conversations;
+  });
+
+  afterEach(async () => {
+    await cleanupTestDatabase(db);
+  });
+
+  it("should create a conversation", async () => {
+    // Arrange
+    const data = {
+      createdBy: "user-abc123",
+      title: "Test Conversation",
+      contextType: null,
+      contextId: null,
+    };
+
+    // Act
+    const result = await conversationRepo.create(data);
+
+    // Assert
+    expect(result.success).to.be.true;
+    if (result.success) {
+      expect(result.data.title).to.equal("Test Conversation");
+      expect(result.data.created_by).to.equal("user-abc123");
+    }
+  });
+});
+```
+
+### 11. Security Patterns
 
 #### Input Validation
 
-Always validate input at system boundaries.
+Always validate input at system boundaries:
 
-#### Authentication
+```typescript
+// Good - Validate before processing
+router.post("/internal/conversations", async (req, res) => {
+  const { participantIds, contextType } = req.body;
 
-- Public GraphQL API: JWT verification via Persona shared secret
-- Internal API: Bearer token with `MSGCORE_INTERNAL_SECRET`
+  if (!Array.isArray(participantIds) || participantIds.length < 1) {
+    res.status(400).json({ error: "Invalid participantIds" });
+    return;
+  }
 
-### 10. Logging
+  if (contextType !== undefined && typeof contextType !== "string") {
+    res.status(400).json({ error: "Invalid contextType" });
+    return;
+  }
+
+  // Process validated input
+});
+```
+
+#### Authentication & Authorization
+
+```typescript
+// Internal API authentication middleware
+export function createInternalAuthMiddleware(internalSecret: string) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader !== `Bearer ${internalSecret}`) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    next();
+  };
+}
+```
+
+### 12. Logging
 
 Use structured logging, never console.log:
 
@@ -239,10 +503,13 @@ console.log("Conversation created: " + conversationId);
 
 Before submitting a PR, ensure:
 
+- [ ] All functions use Result types for error handling
 - [ ] No classes used
 - [ ] All imports include `.js` extension
 - [ ] All database queries use Tinqer (no raw SQL unless necessary)
 - [ ] Repository pattern implemented for data access
+- [ ] JSDoc comments for public functions
+- [ ] Input validation for all endpoints
 - [ ] No `any` types used
 - [ ] Strict equality only (`===`/`!==`, never `==`/`!=`)
 - [ ] Tests included for new functionality

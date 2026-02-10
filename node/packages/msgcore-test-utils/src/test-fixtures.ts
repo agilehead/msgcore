@@ -6,7 +6,18 @@ import { randomBytes } from "crypto";
 
 // Generate a random alphanumeric ID of given length
 export function generateId(length = 16): string {
-  return randomBytes(length).toString("hex").substring(0, length);
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = randomBytes(length);
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    const byte = bytes[i];
+    if (byte !== undefined) {
+      const charIndex = byte % chars.length;
+      result += chars.charAt(charIndex);
+    }
+  }
+  return result;
 }
 
 // Create a test conversation fixture

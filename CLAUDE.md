@@ -77,6 +77,7 @@ When you begin working on this project, you MUST:
 2. **Check for ongoing tasks in `.todos/` directory** - Look for any in-progress task files
 3. **Read the key documentation files** in this order:
    - `/README.md` - Project overview
+   - `/CODING-STANDARDS.md` - Mandatory coding patterns and conventions
    - `.env.example` - Configuration options
 
 Only after reading these documents should you proceed with any implementation or analysis tasks.
@@ -376,6 +377,22 @@ See `.env.example` for complete list. Key variables:
 // Always include .js extension
 import { createConversationRepository } from "./repositories/sqlite/conversation.js";
 import type { ConversationRow } from "@agilehead/msgcore-db";
+```
+
+### Result Type Pattern
+
+```typescript
+export type Result<T, E = Error> = { success: true; data: T } | { success: false; error: E };
+
+export async function doSomething(): Promise<Result<Data>> {
+  if (error) {
+    return {
+      success: false,
+      error: new Error("Description"),
+    };
+  }
+  return { success: true, data: result };
+}
 ```
 
 ### Tinqer Query Pattern

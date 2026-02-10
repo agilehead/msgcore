@@ -244,11 +244,11 @@ When running background operations like deploys, builds, or tests:
 
 ```bash
 # Check migration status
-npm run migrate:status
+npm run migrate:msgcore:status
 
 # Run migrations (ONLY when explicitly asked)
-npm run migrate:latest
-npm run migrate:rollback
+npm run migrate:msgcore:latest
+npm run migrate:msgcore:rollback
 ```
 
 ### Testing Commands
@@ -301,7 +301,7 @@ msgcore/
 │       ├── msgcore-logger/  # Structured logging
 │       └── msgcore-test-utils/ # Test utilities
 ├── database/                # Migrations
-│   └── sqlite/migrations/   # SQLite migrations
+│   └── msgcore/              # Knexfile and migrations
 ├── scripts/                 # Build and utility scripts
 └── devenv/                  # Development Docker Compose setup
 ```

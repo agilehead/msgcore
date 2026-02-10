@@ -11,12 +11,9 @@ const logger = createLogger("msgcore-migrations");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Migrations are in the database directory at the project root
-// From: node/packages/msgcore-db/src/migrations.ts
-// To: database/sqlite/migrations
 const MIGRATIONS_DIR = join(
   __dirname,
-  "../../../../database/sqlite/migrations",
+  "../../../../database/msgcore/migrations",
 );
 
 type MigrationResult = [batchNo: number, log: string[]];

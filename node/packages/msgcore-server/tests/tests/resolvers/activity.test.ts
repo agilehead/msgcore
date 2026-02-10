@@ -82,6 +82,15 @@ describe("Activity Resolvers", () => {
       ).to.be.greaterThan(0);
     });
 
+    it("should reject unauthenticated requests", async () => {
+      const result = await graphql<{
+        activityCounts: { newConversationCount: number };
+      }>(ACTIVITY_COUNTS, {});
+
+      expect(result.errors).to.not.equal(undefined);
+      expect(result.errors?.[0]?.message).to.include("Authentication required");
+    });
+
     it("should return 0 after markAllSeen", async () => {
       const convResult = await graphql<{
         createConversation: ConversationType;

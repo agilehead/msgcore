@@ -16,15 +16,16 @@ export function verifyAccessToken(
   try {
     const decoded = jwt.verify(token, secret) as Record<string, unknown>;
 
+    // Prefer userId (application user ID) over sub (Persona identity ID)
     const userId =
-      typeof decoded.sub === "string"
-        ? decoded.sub
-        : typeof decoded.userId === "string"
-          ? decoded.userId
+      typeof decoded.userId === "string"
+        ? decoded.userId
+        : typeof decoded.sub === "string"
+          ? decoded.sub
           : null;
 
     if (userId === null) {
-      logger.warn("JWT missing userId/sub claim");
+      logger.warn("JWT missing userId claim");
       return null;
     }
 

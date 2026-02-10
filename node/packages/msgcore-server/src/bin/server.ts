@@ -7,6 +7,7 @@
 
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@as-integrations/express5";
 import { readFileSync } from "fs";
@@ -62,6 +63,7 @@ async function startServer(): Promise<void> {
       app.set("trust proxy", 1);
     }
     app.use(cors({ origin: config.cors.origins, credentials: true }));
+    app.use(cookieParser());
     app.use(express.json({ limit: "1mb" }));
 
     app.get("/health", (_req, res) => {
@@ -69,13 +71,13 @@ async function startServer(): Promise<void> {
     });
 
     // Internal service-to-service routes
-    app.use("/internal", createInternalRoutes(config.internalSecret, repos));
+    app.use("/internal", createInternalRoutes(config.internal.secret, repos));
 
     app.use(
       "/graphql",
       expressMiddleware(server, {
         context: ({ req }) =>
-          Promise.resolve(createContext(repos, config.jwtSecret, req)),
+          Promise.resolve(createContext(repos, config.auth.jwtSecret, req)),
       }),
     );
 

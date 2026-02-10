@@ -3,6 +3,9 @@ import { setupGlobalHooks } from "./setup.js";
 // Setup global before/after hooks
 setupGlobalHooks();
 
+// Auth unit tests
+import "./tests/auth/jwt.test.js";
+
 // Repository tests
 import "./tests/repositories/conversation.test.js";
 import "./tests/repositories/message.test.js";

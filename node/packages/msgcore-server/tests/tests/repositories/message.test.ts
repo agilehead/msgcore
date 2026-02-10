@@ -41,6 +41,32 @@ describe("Message Repository", () => {
       expect(message.is_deleted).to.equal(0);
     });
 
+    it("should create a message with replyTo", () => {
+      const originalId = generateId();
+      messageRepo.create({
+        id: originalId,
+        conversationId,
+        senderId: "user-1",
+        body: "Original message",
+        metadata: null,
+        replyTo: null,
+      });
+
+      const replyId = generateId();
+      const reply = messageRepo.create({
+        id: replyId,
+        conversationId,
+        senderId: "user-2",
+        body: "Reply to original",
+        metadata: null,
+        replyTo: originalId,
+      });
+
+      expect(reply.reply_to).to.equal(originalId);
+      const found = messageRepo.findById(replyId);
+      expect(found?.reply_to).to.equal(originalId);
+    });
+
     it("should create a message with metadata", () => {
       const metadata = JSON.stringify({ type: "offer" });
       const message = messageRepo.create({

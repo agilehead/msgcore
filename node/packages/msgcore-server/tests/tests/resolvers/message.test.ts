@@ -201,5 +201,66 @@ describe("Message Resolvers", () => {
       expect(result.errors).to.not.equal(undefined);
       expect(result.errors?.[0]?.message).to.include("Only the sender");
     });
+
+    it("should reject deletion of non-existent message", async () => {
+      const result = await graphql<{ deleteMessage: boolean }>(
+        DELETE_MESSAGE,
+        { messageId: "nonexistent-msg" },
+        token1,
+      );
+
+      expect(result.errors).to.not.equal(undefined);
+      expect(result.errors?.[0]?.message).to.include("Message not found");
+    });
+  });
+
+  describe("auth rejection", () => {
+    it("should reject unauthenticated sendMessage", async () => {
+      const result = await graphql<{ sendMessage: MessageType }>(SEND_MESSAGE, {
+        conversationId: "fake",
+        body: "test",
+      });
+
+      expect(result.errors).to.not.equal(undefined);
+      expect(result.errors?.[0]?.message).to.include("Authentication required");
+    });
+
+    it("should reject unauthenticated deleteMessage", async () => {
+      const result = await graphql<{ deleteMessage: boolean }>(DELETE_MESSAGE, {
+        messageId: "fake",
+      });
+
+      expect(result.errors).to.not.equal(undefined);
+      expect(result.errors?.[0]?.message).to.include("Authentication required");
+    });
+  });
+
+  describe("sendMessage with replyTo", () => {
+    it("should send a reply to an existing message", async () => {
+      const convResult = await graphql<{
+        createConversation: ConversationType;
+      }>(CREATE_CONVERSATION, { input: { participantIds: [userId2] } }, token1);
+      const convId = convResult.data?.createConversation.id;
+
+      const originalMsg = await graphql<{ sendMessage: MessageType }>(
+        SEND_MESSAGE,
+        { conversationId: convId, body: "Original message" },
+        token1,
+      );
+      const originalId = originalMsg.data?.sendMessage.id;
+
+      const replyResult = await graphql<{ sendMessage: MessageType }>(
+        SEND_MESSAGE,
+        {
+          conversationId: convId,
+          body: "This is a reply",
+          replyTo: originalId,
+        },
+        token2,
+      );
+
+      expect(replyResult.errors).to.equal(undefined);
+      expect(replyResult.data?.sendMessage.replyTo).to.equal(originalId);
+    });
   });
 });

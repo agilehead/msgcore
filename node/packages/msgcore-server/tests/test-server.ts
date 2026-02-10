@@ -6,6 +6,7 @@
 
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@as-integrations/express5";
 import { readFileSync } from "fs";
@@ -60,6 +61,7 @@ export async function startTestServer(
   // Create Express app
   const app = express();
   app.use(cors());
+  app.use(cookieParser());
   app.use(express.json());
 
   // Health check

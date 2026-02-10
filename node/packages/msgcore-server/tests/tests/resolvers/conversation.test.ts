@@ -8,6 +8,7 @@ import {
   MY_CONVERSATIONS,
   MARK_CONVERSATION_SEEN,
   MARK_ALL_SEEN,
+  SEND_MESSAGE,
 } from "../../graphql/operations/conversations.js";
 
 type GraphQLResponse<T> = {
@@ -326,6 +327,247 @@ describe("Conversation Resolvers", () => {
 
       expect(result.errors).to.equal(undefined);
       expect(result.data?.markAllSeen).to.equal(true);
+    });
+
+    it("should reject unauthenticated requests", async () => {
+      const result = await graphql<{ markAllSeen: boolean }>(MARK_ALL_SEEN, {});
+
+      expect(result.errors).to.not.equal(undefined);
+      expect(result.errors?.[0]?.message).to.include("Authentication required");
+    });
+  });
+
+  describe("auth rejection", () => {
+    it("should reject unauthenticated conversation query", async () => {
+      const result = await graphql<{ conversation: unknown }>(
+        GET_CONVERSATION,
+        { id: "fake-id" },
+      );
+
+      expect(result.errors).to.not.equal(undefined);
+      expect(result.errors?.[0]?.message).to.include("Authentication required");
+    });
+
+    it("should reject unauthenticated conversationByContext query", async () => {
+      const result = await graphql<{ conversationByContext: unknown }>(
+        GET_CONVERSATION_BY_CONTEXT,
+        { contextType: "item", contextId: "item-1", participantId: "user-1" },
+      );
+
+      expect(result.errors).to.not.equal(undefined);
+      expect(result.errors?.[0]?.message).to.include("Authentication required");
+    });
+
+    it("should reject unauthenticated myConversations query", async () => {
+      const result = await graphql<{ myConversations: unknown }>(
+        MY_CONVERSATIONS,
+        {},
+      );
+
+      expect(result.errors).to.not.equal(undefined);
+      expect(result.errors?.[0]?.message).to.include("Authentication required");
+    });
+
+    it("should reject unauthenticated markConversationSeen", async () => {
+      const result = await graphql<{ markConversationSeen: unknown }>(
+        MARK_CONVERSATION_SEEN,
+        { conversationId: "fake-id" },
+      );
+
+      expect(result.errors).to.not.equal(undefined);
+      expect(result.errors?.[0]?.message).to.include("Authentication required");
+    });
+  });
+
+  describe("createConversation with displayNames", () => {
+    it("should set display names on participants", async () => {
+      const result = await graphql<{ createConversation: ConversationType }>(
+        CREATE_CONVERSATION,
+        {
+          input: {
+            participantIds: [userId2],
+            title: "With Names",
+            displayNames: [
+              { userId: userId1, displayName: "Alice" },
+              { userId: userId2, displayName: "Bob" },
+            ],
+          },
+        },
+        token1,
+      );
+
+      expect(result.errors).to.equal(undefined);
+      const participants = result.data?.createConversation.participants;
+      expect(participants).to.have.length(2);
+      const alice = participants?.find((p) => p.userId === userId1);
+      const bob = participants?.find((p) => p.userId === userId2);
+      expect(alice?.displayName).to.equal("Alice");
+      expect(bob?.displayName).to.equal("Bob");
+    });
+  });
+
+  describe("conversation field resolvers", () => {
+    it("should return messages when querying conversation", async () => {
+      const convResult = await graphql<{
+        createConversation: ConversationType;
+      }>(CREATE_CONVERSATION, { input: { participantIds: [userId2] } }, token1);
+      const convId = convResult.data?.createConversation.id;
+
+      // Send a message
+      await graphql(
+        SEND_MESSAGE,
+        { conversationId: convId, body: "Test message" },
+        token1,
+      );
+
+      // Fetch conversation and check messages
+      const result = await graphql<{ conversation: ConversationType }>(
+        GET_CONVERSATION,
+        { id: convId },
+        token1,
+      );
+
+      expect(result.errors).to.equal(undefined);
+      expect(result.data?.conversation.messages).to.have.length(1);
+    });
+
+    it("should return hasUnread true when participant has not seen conversation", async () => {
+      const convResult = await graphql<{
+        createConversation: ConversationType;
+      }>(CREATE_CONVERSATION, { input: { participantIds: [userId2] } }, token1);
+      const convId = convResult.data?.createConversation.id;
+
+      // Send a message so there's activity
+      await graphql(
+        SEND_MESSAGE,
+        { conversationId: convId, body: "Unread message" },
+        token1,
+      );
+
+      // user2 checks — should be unread
+      const result = await graphql<{ conversation: ConversationType }>(
+        GET_CONVERSATION,
+        { id: convId },
+        token2,
+      );
+
+      expect(result.errors).to.equal(undefined);
+      expect(result.data?.conversation.hasUnread).to.equal(true);
+    });
+
+    it("should return hasUnread false after marking seen", async () => {
+      const convResult = await graphql<{
+        createConversation: ConversationType;
+      }>(CREATE_CONVERSATION, { input: { participantIds: [userId2] } }, token1);
+      const convId = convResult.data?.createConversation.id;
+
+      await graphql(
+        SEND_MESSAGE,
+        { conversationId: convId, body: "Message" },
+        token1,
+      );
+
+      // user2 marks as seen
+      await graphql(MARK_CONVERSATION_SEEN, { conversationId: convId }, token2);
+
+      // user2 checks — should not be unread
+      const result = await graphql<{ conversation: ConversationType }>(
+        GET_CONVERSATION,
+        { id: convId },
+        token2,
+      );
+
+      expect(result.errors).to.equal(undefined);
+      expect(result.data?.conversation.hasUnread).to.equal(false);
+    });
+  });
+
+  describe("markConversationSeen errors", () => {
+    it("should reject non-participant", async () => {
+      const convResult = await graphql<{
+        createConversation: ConversationType;
+      }>(CREATE_CONVERSATION, { input: { participantIds: [userId2] } }, token1);
+      const convId = convResult.data?.createConversation.id;
+
+      const outsiderToken = createTestToken("user-outsider");
+      const result = await graphql<{ markConversationSeen: boolean }>(
+        MARK_CONVERSATION_SEEN,
+        { conversationId: convId },
+        outsiderToken,
+      );
+
+      expect(result.errors).to.not.equal(undefined);
+      expect(result.errors?.[0]?.message).to.include("Not a participant");
+    });
+  });
+
+  describe("myConversations with filters", () => {
+    it("should filter by contextType", async () => {
+      await graphql(
+        CREATE_CONVERSATION,
+        {
+          input: {
+            participantIds: [userId2],
+            contextType: "item",
+            contextId: "item-f1",
+          },
+        },
+        token1,
+      );
+      await graphql(
+        CREATE_CONVERSATION,
+        {
+          input: {
+            participantIds: [userId2],
+            contextType: "order",
+            contextId: "order-f1",
+          },
+        },
+        token1,
+      );
+
+      const result = await graphql<{
+        myConversations: {
+          nodes: ConversationType[];
+          totalCount: number;
+        };
+      }>(MY_CONVERSATIONS, { contextType: "item" }, token1);
+
+      expect(result.errors).to.equal(undefined);
+      expect(result.data?.myConversations.totalCount).to.equal(1);
+    });
+
+    it("should filter by search", async () => {
+      await graphql(
+        CREATE_CONVERSATION,
+        {
+          input: {
+            participantIds: [userId2],
+            title: "Selling a laptop",
+          },
+        },
+        token1,
+      );
+      await graphql(
+        CREATE_CONVERSATION,
+        {
+          input: {
+            participantIds: [userId2],
+            title: "Random chat",
+          },
+        },
+        token1,
+      );
+
+      const result = await graphql<{
+        myConversations: {
+          nodes: ConversationType[];
+          totalCount: number;
+        };
+      }>(MY_CONVERSATIONS, { search: "laptop" }, token1);
+
+      expect(result.errors).to.equal(undefined);
+      expect(result.data?.myConversations.totalCount).to.equal(1);
     });
   });
 });

@@ -1,7 +1,7 @@
 /**
  * Internal Routes
  * Authenticated endpoints for service-to-service operations.
- * Protected by MSGCORE_INTERNAL_SECRET bearer token.
+ * Protected by MSGCORE_INTERNAL_SECRET via X-Internal-Secret header.
  */
 
 import {
@@ -28,8 +28,8 @@ export function createInternalRoutes(
 
   // Authenticate all internal routes with MSGCORE_INTERNAL_SECRET
   router.use((req: Request, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader !== `Bearer ${internalSecret}`) {
+    const secret = req.headers["x-internal-secret"];
+    if (secret !== internalSecret) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }

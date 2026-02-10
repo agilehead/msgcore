@@ -45,9 +45,17 @@ export const config = {
     level: optional("LOG_LEVEL", "info"),
     fileDir: process.env.MSGCORE_LOG_FILE_DIR,
   },
-  internalSecret: required("MSGCORE_INTERNAL_SECRET"),
-  jwtSecret: required("PERSONA_JWT_SECRET"),
-  cors: { origins: required("MSGCORE_CORS_ORIGINS").split(",") },
+  internal: {
+    secret: required("MSGCORE_INTERNAL_SECRET"),
+  },
+  auth: {
+    jwtSecret: required("PERSONA_JWT_SECRET"),
+  },
+  cors: {
+    origins: required("MSGCORE_CORS_ORIGINS")
+      .split(",")
+      .map((o) => o.trim()),
+  },
 };
 
 export type Config = typeof config;

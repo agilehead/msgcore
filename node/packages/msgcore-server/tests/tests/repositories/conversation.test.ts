@@ -143,6 +143,138 @@ describe("Conversation Repository", () => {
     });
   });
 
+  describe("findByContextAndParticipants", () => {
+    it("should find conversation matching context and participants", () => {
+      const id = generateId();
+      conversationRepo.create({
+        id,
+        contextType: "item",
+        contextId: "item-99",
+        title: null,
+        createdBy: "user-1",
+        participants: [
+          { userId: "user-1", displayName: null },
+          { userId: "user-2", displayName: null },
+        ],
+      });
+
+      const found = conversationRepo.findByContextAndParticipants(
+        "item",
+        "item-99",
+        ["user-1", "user-2"],
+      );
+      expect(found).to.not.equal(null);
+      expect(found?.id).to.equal(id);
+    });
+
+    it("should return null when context does not exist", () => {
+      const found = conversationRepo.findByContextAndParticipants(
+        "nonexistent",
+        "none",
+        ["user-1"],
+      );
+      expect(found).to.equal(null);
+    });
+
+    it("should return null when participants do not match", () => {
+      conversationRepo.create({
+        id: generateId(),
+        contextType: "item",
+        contextId: "item-100",
+        title: null,
+        createdBy: "user-1",
+        participants: [
+          { userId: "user-1", displayName: null },
+          { userId: "user-2", displayName: null },
+        ],
+      });
+
+      // Search with different participant set
+      const found = conversationRepo.findByContextAndParticipants(
+        "item",
+        "item-100",
+        ["user-1", "user-3"],
+      );
+      expect(found).to.equal(null);
+    });
+  });
+
+  describe("findByUserId with filters", () => {
+    it("should filter by contextType", () => {
+      conversationRepo.create({
+        id: generateId(),
+        contextType: "item",
+        contextId: "item-1",
+        title: null,
+        createdBy: "user-filter",
+        participants: [{ userId: "user-filter", displayName: null }],
+      });
+      conversationRepo.create({
+        id: generateId(),
+        contextType: "order",
+        contextId: "order-1",
+        title: null,
+        createdBy: "user-filter",
+        participants: [{ userId: "user-filter", displayName: null }],
+      });
+
+      const result = conversationRepo.findByUserId("user-filter", {
+        contextType: "item",
+        limit: 20,
+        offset: 0,
+      });
+      expect(result.totalCount).to.equal(1);
+      expect(result.rows).to.have.length(1);
+    });
+
+    it("should filter by search on title", () => {
+      conversationRepo.create({
+        id: generateId(),
+        contextType: null,
+        contextId: null,
+        title: "About selling a bike",
+        createdBy: "user-search",
+        participants: [{ userId: "user-search", displayName: null }],
+      });
+      conversationRepo.create({
+        id: generateId(),
+        contextType: null,
+        contextId: null,
+        title: "Random chat",
+        createdBy: "user-search",
+        participants: [{ userId: "user-search", displayName: null }],
+      });
+
+      const result = conversationRepo.findByUserId("user-search", {
+        search: "bike",
+        limit: 20,
+        offset: 0,
+      });
+      expect(result.totalCount).to.equal(1);
+      expect(result.rows[0]?.title).to.equal("About selling a bike");
+    });
+  });
+
+  describe("updateParticipantLastSeen", () => {
+    it("should update the last_seen_at timestamp", () => {
+      const id = generateId();
+      conversationRepo.create({
+        id,
+        contextType: null,
+        contextId: null,
+        title: null,
+        createdBy: "user-1",
+        participants: [{ userId: "user-1", displayName: null }],
+      });
+
+      const now = new Date().toISOString();
+      conversationRepo.updateParticipantLastSeen(id, "user-1", now);
+
+      const participant = conversationRepo.findParticipant(id, "user-1");
+      expect(participant?.last_seen_at).to.equal(now);
+    });
+  });
+
   describe("updateLastMessageAt", () => {
     it("should update the last_message_at timestamp", () => {
       const id = generateId();

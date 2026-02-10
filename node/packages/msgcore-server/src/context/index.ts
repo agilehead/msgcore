@@ -16,6 +16,7 @@ export type Repositories = {
 export type Context = {
   repos: Repositories;
   userId: string | null;
+  tenant: string | null;
 };
 
 export function createContext(
@@ -24,6 +25,7 @@ export function createContext(
   req: Request,
 ): Context {
   let userId: string | null = null;
+  let tenant: string | null = null;
 
   // Try Authorization header first
   const authHeader = req.headers.authorization;
@@ -32,26 +34,26 @@ export function createContext(
     const payload = verifyAccessToken(token, jwtSecret);
     if (payload !== null) {
       userId = payload.userId;
+      tenant = payload.tenant ?? null;
     }
   }
 
-  // Try cookie fallback
+  // Try cookie fallback (requires cookie-parser middleware)
   if (userId === null) {
-    const cookieHeader = req.headers.cookie;
-    if (typeof cookieHeader === "string") {
-      const tokenMatch = /access_token=([^;]+)/.exec(cookieHeader);
-      if (tokenMatch?.[1] !== undefined) {
-        const payload = verifyAccessToken(tokenMatch[1], jwtSecret);
-        if (payload !== null) {
-          userId = payload.userId;
-        }
+    const cookies = req.cookies as Record<string, string> | undefined;
+    const accessToken = cookies?.access_token;
+    if (typeof accessToken === "string" && accessToken !== "") {
+      const payload = verifyAccessToken(accessToken, jwtSecret);
+      if (payload !== null) {
+        userId = payload.userId;
+        tenant = payload.tenant ?? null;
       }
     }
   }
 
   if (userId !== null) {
-    logger.debug("Authenticated user", { userId });
+    logger.debug("Authenticated user", { userId, tenant });
   }
 
-  return { repos, userId };
+  return { repos, userId, tenant };
 }

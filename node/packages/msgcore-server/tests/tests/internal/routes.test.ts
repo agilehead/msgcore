@@ -1,5 +1,10 @@
 import { expect } from "chai";
-import { serverBaseUrl, internalSecret, truncateTables } from "../../setup.js";
+import {
+  serverBaseUrl,
+  internalSecret,
+  truncateTables,
+  messageRepo,
+} from "../../setup.js";
 
 describe("Internal Routes", () => {
   beforeEach(() => {
@@ -25,7 +30,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer wrong-secret",
+          "X-Internal-Secret": "wrong-secret",
         },
         body: JSON.stringify({
           participantIds: ["user-1", "user-2"],
@@ -43,7 +48,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${internalSecret}`,
+          "X-Internal-Secret": internalSecret,
         },
         body: JSON.stringify({
           participantIds: ["user-1", "user-2"],
@@ -70,7 +75,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${internalSecret}`,
+          "X-Internal-Secret": internalSecret,
         },
         body: JSON.stringify(payload),
       });
@@ -81,7 +86,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${internalSecret}`,
+          "X-Internal-Secret": internalSecret,
         },
         body: JSON.stringify(payload),
       });
@@ -101,7 +106,7 @@ describe("Internal Routes", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${internalSecret}`,
+            "X-Internal-Secret": internalSecret,
           },
           body: JSON.stringify({
             participantIds: ["user-1", "user-2"],
@@ -116,7 +121,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${internalSecret}`,
+          "X-Internal-Secret": internalSecret,
         },
         body: JSON.stringify({
           conversationId: conv.id,
@@ -140,7 +145,7 @@ describe("Internal Routes", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${internalSecret}`,
+            "X-Internal-Secret": internalSecret,
           },
           body: JSON.stringify({
             participantIds: ["user-1"],
@@ -154,7 +159,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${internalSecret}`,
+          "X-Internal-Secret": internalSecret,
         },
         body: JSON.stringify({
           conversationId: conv.id,
@@ -171,7 +176,7 @@ describe("Internal Routes", () => {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${internalSecret}`,
+            "X-Internal-Secret": internalSecret,
           },
           body: JSON.stringify({ reason: "Policy violation" }),
         },
@@ -183,8 +188,125 @@ describe("Internal Routes", () => {
     });
   });
 
+  describe("POST /internal/conversation validation", () => {
+    it("should reject empty participantIds", async () => {
+      const response = await fetch(`${serverBaseUrl}/internal/conversation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": internalSecret,
+        },
+        body: JSON.stringify({
+          participantIds: [],
+          createdBy: "user-1",
+        }),
+      });
+
+      expect(response.status).to.equal(400);
+    });
+
+    it("should reject missing createdBy", async () => {
+      const response = await fetch(`${serverBaseUrl}/internal/conversation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": internalSecret,
+        },
+        body: JSON.stringify({
+          participantIds: ["user-1"],
+        }),
+      });
+
+      expect(response.status).to.equal(400);
+    });
+  });
+
+  describe("POST /internal/message validation", () => {
+    it("should reject missing conversationId", async () => {
+      const response = await fetch(`${serverBaseUrl}/internal/message`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": internalSecret,
+        },
+        body: JSON.stringify({
+          senderId: "user-1",
+          body: "test",
+        }),
+      });
+
+      expect(response.status).to.equal(400);
+    });
+
+    it("should reject missing senderId", async () => {
+      const response = await fetch(`${serverBaseUrl}/internal/message`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": internalSecret,
+        },
+        body: JSON.stringify({
+          conversationId: "fake",
+          body: "test",
+        }),
+      });
+
+      expect(response.status).to.equal(400);
+    });
+
+    it("should reject missing body", async () => {
+      const response = await fetch(`${serverBaseUrl}/internal/message`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": internalSecret,
+        },
+        body: JSON.stringify({
+          conversationId: "fake",
+          senderId: "user-1",
+        }),
+      });
+
+      expect(response.status).to.equal(400);
+    });
+
+    it("should return 404 for non-existent conversation", async () => {
+      const response = await fetch(`${serverBaseUrl}/internal/message`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": internalSecret,
+        },
+        body: JSON.stringify({
+          conversationId: "nonexistent",
+          senderId: "user-1",
+          body: "test",
+        }),
+      });
+
+      expect(response.status).to.equal(404);
+    });
+  });
+
+  describe("DELETE /internal/message/:id errors", () => {
+    it("should return 404 for non-existent message", async () => {
+      const response = await fetch(
+        `${serverBaseUrl}/internal/message/nonexistent`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Internal-Secret": internalSecret,
+          },
+        },
+      );
+
+      expect(response.status).to.equal(404);
+    });
+  });
+
   describe("POST /internal/anonymize/:userId", () => {
-    it("should anonymize user data", async () => {
+    it("should anonymize user data and verify changes", async () => {
       // Create conversation and message
       const convResponse = await fetch(
         `${serverBaseUrl}/internal/conversation`,
@@ -192,37 +314,39 @@ describe("Internal Routes", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${internalSecret}`,
+            "X-Internal-Secret": internalSecret,
           },
           body: JSON.stringify({
-            participantIds: ["user-1", "user-2"],
-            createdBy: "user-1",
+            participantIds: ["user-anon-1", "user-anon-2"],
+            createdBy: "user-anon-1",
           }),
         },
       );
       const conv = (await convResponse.json()) as { id: string };
 
-      await fetch(`${serverBaseUrl}/internal/message`, {
+      const msgResponse = await fetch(`${serverBaseUrl}/internal/message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${internalSecret}`,
+          "X-Internal-Secret": internalSecret,
         },
         body: JSON.stringify({
           conversationId: conv.id,
-          senderId: "user-1",
+          senderId: "user-anon-1",
           body: "Personal data here",
+          metadata: JSON.stringify({ private: true }),
         }),
       });
+      const msg = (await msgResponse.json()) as { id: string };
 
       // Anonymize
       const response = await fetch(
-        `${serverBaseUrl}/internal/anonymize/user-1`,
+        `${serverBaseUrl}/internal/anonymize/user-anon-1`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${internalSecret}`,
+            "X-Internal-Secret": internalSecret,
           },
         },
       );
@@ -230,6 +354,12 @@ describe("Internal Routes", () => {
       expect(response.status).to.equal(200);
       const body = (await response.json()) as { success: boolean };
       expect(body.success).to.equal(true);
+
+      // Verify the message was actually anonymized
+      const anonymizedMsg = messageRepo.findById(msg.id);
+      expect(anonymizedMsg?.body).to.equal("[anonymized]");
+      expect(anonymizedMsg?.metadata).to.equal(null);
+      expect(anonymizedMsg?.sender_id).to.equal("anonymous");
     });
   });
 });

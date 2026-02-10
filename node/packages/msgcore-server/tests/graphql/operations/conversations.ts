@@ -1,5 +1,5 @@
 export const HEALTH_QUERY = `
-  query {
+  query Health {
     health
   }
 `;
@@ -68,7 +68,7 @@ export const MY_CONVERSATIONS = `
 `;
 
 export const ACTIVITY_COUNTS = `
-  query {
+  query ActivityCounts {
     activityCounts {
       newConversationCount
     }
@@ -121,7 +121,7 @@ export const MARK_CONVERSATION_SEEN = `
 `;
 
 export const MARK_ALL_SEEN = `
-  mutation {
+  mutation MarkAllSeen {
     markAllSeen
   }
 `;

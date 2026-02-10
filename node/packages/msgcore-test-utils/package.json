@@ -1,0 +1,31 @@
+{
+  "name": "@agilehead/msgcore-test-utils",
+  "version": "0.0.1",
+  "description": "Test utilities for MsgCore",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
+  },
+  "dependencies": {
+    "@agilehead/msgcore-db": "file:../msgcore-db",
+    "@agilehead/msgcore-logger": "file:../msgcore-logger",
+    "better-sqlite3": "^11.8.1",
+    "knex": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.10.5",
+    "typescript": "^5.9.2"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  }
+}

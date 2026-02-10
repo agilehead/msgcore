@@ -1,0 +1,55 @@
+# Docker Compose configuration for MsgCore
+#
+# Usage:
+#   Development: docker compose up
+#   Testing:     Used by scripts/test-integration.sh compose
+#
+# Required environment variables (set by test-integration.sh or export manually):
+#   ENV_FILE - path to env file with configuration
+#
+# Host path variables (all have defaults):
+#   MSGCORE_DATA_HOST_DIR - host path for msgcore db (default: ./data/msgcore/db)
+#   MSGCORE_LOG_HOST_DIR - host path for msgcore logs (default: ./data/msgcore/logs)
+
+services:
+  # Database migrations - runs once and exits
+  msgcore-migrations:
+    image: msgcore-migrations:latest
+    container_name: msgcore-migrations
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - MSGCORE_DATA_DIR=/app/data/msgcore/db
+    volumes:
+      - ${MSGCORE_DATA_HOST_DIR:-./data/msgcore/db}:/app/data/msgcore/db
+
+  # MsgCore Server
+  msgcore:
+    image: msgcore:latest
+    container_name: msgcore
+    ports:
+      - "127.0.0.1:5007:5007"
+    env_file:
+      - ${ENV_FILE:-../.env}
+    environment:
+      # Container-specific paths and hosts (override values from env_file)
+      - NODE_ENV=${NODE_ENV:-production}
+      - MSGCORE_SERVER_HOST=0.0.0.0
+      - MSGCORE_SERVER_PORT=5007
+      - MSGCORE_DATA_DIR=/app/data/msgcore/db
+      - MSGCORE_LOG_FILE_DIR=/app/data/msgcore/logs
+      - MSGCORE_CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+    volumes:
+      - ${MSGCORE_DATA_HOST_DIR:-./data/msgcore/db}:/app/data/msgcore/db
+      - ${MSGCORE_LOG_HOST_DIR:-./data/msgcore/logs}:/app/data/msgcore/logs
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:5007/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

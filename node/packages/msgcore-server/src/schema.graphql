@@ -1,0 +1,75 @@
+scalar DateTime
+
+type Query {
+  health: String!
+  conversation(id: String!): Conversation
+  conversationByContext(contextType: String!, contextId: String!, participantId: String!): Conversation
+  myConversations(contextType: String, search: String, limit: Int, offset: Int): ConversationConnection!
+  activityCounts: ActivityCounts!
+}
+
+type Mutation {
+  createConversation(input: CreateConversationInput!): Conversation!
+  sendMessage(conversationId: String!, body: String!, metadata: String, replyTo: String): Message!
+  deleteMessage(messageId: String!): Boolean!
+  markConversationSeen(conversationId: String!): Boolean!
+  markAllSeen: Boolean!
+}
+
+type Conversation {
+  id: String!
+  contextType: String
+  contextId: String
+  title: String
+  createdBy: String!
+  lastMessageAt: String!
+  createdAt: String!
+  participants: [ConversationParticipant!]!
+  messages: [Message!]!
+  hasUnread: Boolean!
+}
+
+type ConversationParticipant {
+  userId: String!
+  displayName: String
+  lastSeenAt: String
+}
+
+type Message {
+  id: String!
+  conversationId: String!
+  senderId: String!
+  body: String!
+  metadata: String
+  replyTo: String
+  isDeleted: Boolean!
+  createdAt: String!
+}
+
+type ConversationConnection {
+  nodes: [Conversation!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type ActivityCounts {
+  newConversationCount: Int!
+}
+
+input CreateConversationInput {
+  participantIds: [String!]!
+  contextType: String
+  contextId: String
+  title: String
+  displayNames: [ParticipantDisplayNameInput!]
+}
+
+input ParticipantDisplayNameInput {
+  userId: String!
+  displayName: String!
+}

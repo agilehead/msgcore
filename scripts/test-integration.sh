@@ -93,7 +93,7 @@ MSGCORE_LOG_FILE_DIR=/app/data/msgcore/logs
 
 # Security
 MSGCORE_INTERNAL_SECRET=test-internal-secret
-PERSONA_JWT_SECRET=test-jwt-secret
+MSGCORE_JWT_SECRET=test-jwt-secret
 
 # CORS
 MSGCORE_CORS_ORIGINS=http://localhost:3000,http://localhost:3001

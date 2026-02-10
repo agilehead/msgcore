@@ -49,7 +49,7 @@ export const config = {
     secret: required("MSGCORE_INTERNAL_SECRET"),
   },
   auth: {
-    jwtSecret: required("PERSONA_JWT_SECRET"),
+    jwtSecret: required("MSGCORE_JWT_SECRET"),
   },
   cors: {
     origins: required("MSGCORE_CORS_ORIGINS")

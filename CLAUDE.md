@@ -361,7 +361,7 @@ See `.env.example` for complete list. Key variables:
 ### Security
 
 - `MSGCORE_INTERNAL_SECRET` - Bearer token for internal API endpoints (REQUIRED)
-- `PERSONA_JWT_SECRET` - JWT secret shared with Persona for token verification (REQUIRED)
+- `MSGCORE_JWT_SECRET` - JWT secret for token verification (REQUIRED)
 - `MSGCORE_CORS_ORIGINS` - Comma-separated allowed origins (REQUIRED)
 
 ### Logging

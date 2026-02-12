@@ -96,7 +96,7 @@ export async function internalRequest<T>(options: {
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      "X-Internal-Secret": secret,
+      Authorization: `Bearer ${secret}`,
     };
 
     let response: Response;

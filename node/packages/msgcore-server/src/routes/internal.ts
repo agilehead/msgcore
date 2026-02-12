@@ -1,7 +1,7 @@
 /**
  * Internal Routes
  * Authenticated endpoints for service-to-service operations.
- * Protected by MSGCORE_INTERNAL_SECRET via X-Internal-Secret header.
+ * Protected by MSGCORE_INTERNAL_SECRET via Authorization: Bearer header.
  */
 
 import {
@@ -28,12 +28,53 @@ export function createInternalRoutes(
 
   // Authenticate all internal routes with MSGCORE_INTERNAL_SECRET
   router.use((req: Request, res: Response, next: NextFunction) => {
-    const secret = req.headers["x-internal-secret"];
-    if (secret !== internalSecret) {
+    const authHeader = req.headers.authorization;
+    if (authHeader !== `Bearer ${internalSecret}`) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
     next();
+  });
+
+  // Get conversation by ID (with participants)
+  router.get("/conversation/:id", (req: Request, res: Response) => {
+    try {
+      const rawId = req.params.id;
+      const id = typeof rawId === "string" ? rawId : undefined;
+      if (id === undefined || id === "") {
+        res.status(400).json({ error: "Conversation ID is required" });
+        return;
+      }
+
+      const conv = repos.conversations.findById(id);
+      if (conv === null) {
+        res.status(404).json({ error: "Conversation not found" });
+        return;
+      }
+
+      const participants = repos.conversations.findParticipants(id);
+
+      res.json({
+        id: conv.id,
+        contextType: conv.context_type,
+        contextId: conv.context_id,
+        title: conv.title,
+        createdBy: conv.created_by,
+        lastMessageAt: conv.last_message_at,
+        createdAt: conv.created_at,
+        participants: participants.map((p) => ({
+          userId: p.user_id,
+          displayName: p.display_name,
+          lastSeenAt: p.last_seen_at,
+        })),
+      });
+    } catch (err: unknown) {
+      logger.error("Internal: get conversation failed", err);
+      res.status(500).json({
+        error: "Internal server error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
   });
 
   // Create conversation on behalf of users

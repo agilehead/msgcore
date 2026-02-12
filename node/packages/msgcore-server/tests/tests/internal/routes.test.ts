@@ -30,7 +30,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": "wrong-secret",
+          Authorization: "Bearer wrong-secret",
         },
         body: JSON.stringify({
           participantIds: ["user-1", "user-2"],
@@ -42,13 +42,74 @@ describe("Internal Routes", () => {
     });
   });
 
+  describe("GET /internal/conversation/:id", () => {
+    it("should return conversation with participants", async () => {
+      // Create conversation first
+      const createResponse = await fetch(
+        `${serverBaseUrl}/internal/conversation`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${internalSecret}`,
+          },
+          body: JSON.stringify({
+            participantIds: ["user-1", "user-2"],
+            createdBy: "user-1",
+            title: "Test Conv",
+          }),
+        },
+      );
+      const created = (await createResponse.json()) as { id: string };
+
+      // Get conversation
+      const response = await fetch(
+        `${serverBaseUrl}/internal/conversation/${created.id}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${internalSecret}`,
+          },
+        },
+      );
+
+      expect(response.status).to.equal(200);
+      const body = (await response.json()) as {
+        id: string;
+        title: string;
+        createdBy: string;
+        participants: { userId: string; displayName: string | null }[];
+      };
+      expect(body.id).to.equal(created.id);
+      expect(body.title).to.equal("Test Conv");
+      expect(body.createdBy).to.equal("user-1");
+      expect(body.participants).to.be.an("array").with.lengthOf(2);
+      const userIds = body.participants.map((p) => p.userId).sort();
+      expect(userIds).to.deep.equal(["user-1", "user-2"]);
+    });
+
+    it("should return 404 for non-existent conversation", async () => {
+      const response = await fetch(
+        `${serverBaseUrl}/internal/conversation/nonexistent`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${internalSecret}`,
+          },
+        },
+      );
+
+      expect(response.status).to.equal(404);
+    });
+  });
+
   describe("POST /internal/conversation", () => {
     it("should create a conversation", async () => {
       const response = await fetch(`${serverBaseUrl}/internal/conversation`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify({
           participantIds: ["user-1", "user-2"],
@@ -75,7 +136,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify(payload),
       });
@@ -86,7 +147,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify(payload),
       });
@@ -106,7 +167,7 @@ describe("Internal Routes", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Internal-Secret": internalSecret,
+            Authorization: `Bearer ${internalSecret}`,
           },
           body: JSON.stringify({
             participantIds: ["user-1", "user-2"],
@@ -121,7 +182,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify({
           conversationId: conv.id,
@@ -145,7 +206,7 @@ describe("Internal Routes", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Internal-Secret": internalSecret,
+            Authorization: `Bearer ${internalSecret}`,
           },
           body: JSON.stringify({
             participantIds: ["user-1"],
@@ -159,7 +220,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify({
           conversationId: conv.id,
@@ -176,7 +237,7 @@ describe("Internal Routes", () => {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            "X-Internal-Secret": internalSecret,
+            Authorization: `Bearer ${internalSecret}`,
           },
           body: JSON.stringify({ reason: "Policy violation" }),
         },
@@ -194,7 +255,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify({
           participantIds: [],
@@ -210,7 +271,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify({
           participantIds: ["user-1"],
@@ -227,7 +288,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify({
           senderId: "user-1",
@@ -243,7 +304,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify({
           conversationId: "fake",
@@ -259,7 +320,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify({
           conversationId: "fake",
@@ -275,7 +336,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify({
           conversationId: "nonexistent",
@@ -296,7 +357,7 @@ describe("Internal Routes", () => {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            "X-Internal-Secret": internalSecret,
+            Authorization: `Bearer ${internalSecret}`,
           },
         },
       );
@@ -314,7 +375,7 @@ describe("Internal Routes", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Internal-Secret": internalSecret,
+            Authorization: `Bearer ${internalSecret}`,
           },
           body: JSON.stringify({
             participantIds: ["user-anon-1", "user-anon-2"],
@@ -328,7 +389,7 @@ describe("Internal Routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
         body: JSON.stringify({
           conversationId: conv.id,
@@ -346,7 +407,7 @@ describe("Internal Routes", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Internal-Secret": internalSecret,
+            Authorization: `Bearer ${internalSecret}`,
           },
         },
       );

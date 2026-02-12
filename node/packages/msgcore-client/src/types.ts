@@ -20,7 +20,7 @@ export function failure<E = Error>(error: E): Result<never, E> {
 export type MsgCoreConfig = {
   /** Base URL of the MsgCore service (e.g., "http://localhost:5007") */
   endpoint: string;
-  /** Secret for X-Internal-Secret header */
+  /** Secret for Authorization: Bearer header */
   internalSecret: string;
   /** Request timeout in milliseconds */
   timeout?: number;

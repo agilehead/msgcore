@@ -46,7 +46,10 @@ export type MsgCoreClient = {
     token: string,
   ): Promise<Result<boolean>>;
 
-  // Internal REST writes (use shared secret)
+  // Internal REST (use shared secret)
+  getConversationInternal(
+    id: string,
+  ): Promise<Result<Conversation | null>>;
   createConversation(
     input: CreateConversationInput,
   ): Promise<Result<Conversation>>;
@@ -276,6 +279,26 @@ export function createMsgCoreClient(config: MsgCoreConfig): MsgCoreClient {
       return success(result.data.deleteMessage);
     },
 
+    async getConversationInternal(
+      id: string,
+    ): Promise<Result<Conversation | null>> {
+      const result = await internalRequest<Conversation>({
+        endpoint: base,
+        method: "GET",
+        path: `/internal/conversation/${id}`,
+        secret: internalSecret,
+        timeout,
+        logger,
+      });
+      if (!result.success) {
+        if (result.error.message.includes("404")) {
+          return success(null);
+        }
+        return result;
+      }
+      return result;
+    },
+
     async createConversation(
       input: CreateConversationInput,
     ): Promise<Result<Conversation>> {
@@ -382,6 +405,11 @@ export function createNoOpMsgCoreClient(logger?: Logger): MsgCoreClient {
     },
 
     deleteOwnMessage: (_messageId) => notConfigured("deleteOwnMessage"),
+
+    getConversationInternal(): Promise<Result<Conversation | null>> {
+      warn("getConversationInternal");
+      return Promise.resolve(success(null));
+    },
 
     createConversation: (_input) => notConfigured("createConversation"),
 

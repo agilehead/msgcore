@@ -104,6 +104,9 @@ COPY --from=builder /app/node/packages/msgcore-logger/package*.json ./node/packa
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 
+# Copy database migrations and knexfile
+COPY --from=builder /app/database/ ./database/
+
 # Copy start script and entrypoint
 COPY scripts/start.sh scripts/docker-entrypoint.sh ./scripts/
 RUN chmod +x scripts/start.sh scripts/docker-entrypoint.sh

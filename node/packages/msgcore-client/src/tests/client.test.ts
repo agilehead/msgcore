@@ -280,7 +280,43 @@ describe("MsgCoreClient", () => {
     });
   });
 
-  describe("Internal REST writes", () => {
+  describe("Internal REST", () => {
+    it("should get a conversation by id via internal API", async () => {
+      fetchResponse = {
+        status: 200,
+        body: sampleConversation,
+      };
+      const client = createTestClient();
+      const result = await client.getConversationInternal("conv-1");
+
+      expect(result.success).to.equal(true);
+      if (result.success) {
+        expect(result.data).to.deep.equal(sampleConversation);
+      }
+
+      expect(fetchCalls).to.have.length(1);
+      const call = fetchCalls[0]!;
+      expect(call.url).to.equal(`${TEST_ENDPOINT}/internal/conversation/conv-1`);
+      expect(call.init.method).to.equal("GET");
+
+      const headers = call.init.headers as Record<string, string>;
+      expect(headers["Authorization"]).to.equal(`Bearer ${TEST_SECRET}`);
+    });
+
+    it("should return null for non-existent conversation via internal API", async () => {
+      fetchResponse = {
+        status: 404,
+        body: { error: "Conversation not found" },
+      };
+      const client = createTestClient();
+      const result = await client.getConversationInternal("non-existent");
+
+      expect(result.success).to.equal(true);
+      if (result.success) {
+        expect(result.data).to.be.null;
+      }
+    });
+
     it("should create a conversation", async () => {
       fetchResponse = {
         status: 200,
@@ -309,7 +345,7 @@ describe("MsgCoreClient", () => {
       expect(call.init.method).to.equal("POST");
 
       const headers = call.init.headers as Record<string, string>;
-      expect(headers["X-Internal-Secret"]).to.equal(TEST_SECRET);
+      expect(headers["Authorization"]).to.equal(`Bearer ${TEST_SECRET}`);
       expect(headers["Content-Type"]).to.equal("application/json");
 
       const body = JSON.parse(call.init.body as string) as {
@@ -391,7 +427,7 @@ describe("MsgCoreClient", () => {
       expect(call.init.method).to.equal("POST");
 
       const headers = call.init.headers as Record<string, string>;
-      expect(headers["X-Internal-Secret"]).to.equal(TEST_SECRET);
+      expect(headers["Authorization"]).to.equal(`Bearer ${TEST_SECRET}`);
     });
   });
 
@@ -513,6 +549,16 @@ describe("MsgCoreClient", () => {
     it("should return null for getConversation", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.getConversation("conv-1", TEST_TOKEN);
+
+      expect(result.success).to.equal(true);
+      if (result.success) {
+        expect(result.data).to.be.null;
+      }
+    });
+
+    it("should return null for getConversationInternal", async () => {
+      const client = createNoOpMsgCoreClient();
+      const result = await client.getConversationInternal("conv-1");
 
       expect(result.success).to.equal(true);
       if (result.success) {

@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../MsgCore.Domain/MsgCore.Domain.csproj" />
+    <ProjectReference Include="../MsgCore.Contracts/MsgCore.Contracts.csproj" />
+  </ItemGroup>
+</Project>

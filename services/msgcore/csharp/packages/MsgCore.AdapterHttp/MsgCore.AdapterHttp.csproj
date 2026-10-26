@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../MsgCore.AdapterRuntime/MsgCore.AdapterRuntime.csproj" />
+    <ProjectReference Include="../MsgCore.AdapterSqlite/MsgCore.AdapterSqlite.csproj" />
+    <ProjectReference Include="../MsgCore.AdapterGraphql/MsgCore.AdapterGraphql.csproj" />
+    <ProjectReference Include="../MsgCore.AdapterAuth/MsgCore.AdapterAuth.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>

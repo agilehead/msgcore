@@ -1,0 +1,14 @@
+<Solution>
+  <Project Path="services/msgcore/csharp/apps/MsgCore.Server/MsgCore.Server.csproj" />
+  <Project Path="services/msgcore/csharp/build/MsgCore.EfCompiler/MsgCore.EfCompiler.csproj" />
+  <Project Path="services/msgcore/csharp/build/MsgCore.EfHost/MsgCore.EfHost.csproj" />
+  <Project Path="services/msgcore/csharp/packages/MsgCore.AdapterAuth/MsgCore.AdapterAuth.csproj" />
+  <Project Path="services/msgcore/csharp/packages/MsgCore.AdapterGraphql/MsgCore.AdapterGraphql.csproj" />
+  <Project Path="services/msgcore/csharp/packages/MsgCore.AdapterHttp/MsgCore.AdapterHttp.csproj" />
+  <Project Path="services/msgcore/csharp/packages/MsgCore.AdapterRuntime/MsgCore.AdapterRuntime.csproj" />
+  <Project Path="services/msgcore/csharp/packages/MsgCore.AdapterSqlite/MsgCore.AdapterSqlite.csproj" />
+  <Project Path="services/msgcore/csharp/packages/MsgCore.Contracts/MsgCore.Contracts.csproj" />
+  <Project Path="services/msgcore/csharp/packages/MsgCore.Domain/MsgCore.Domain.csproj" />
+  <Project Path="services/msgcore/csharp/packages/MsgCore.Kernel/MsgCore.Kernel.csproj" />
+  <Project Path="services/msgcore/csharp/tests/MsgCore.ContractProbe/MsgCore.ContractProbe.csproj" />
+</Solution>

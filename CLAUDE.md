@@ -43,9 +43,9 @@ This file provides guidance to Claude Code when working with the MsgCore convers
 
 **CRITICAL**: ALL tests must pass in BOTH local mode AND Docker Compose mode before committing.
 
-- Run `./scripts/test-integration.sh local` and verify all tests pass
-- Run `./scripts/test-integration.sh compose` and verify all tests pass in Docker
-- If Docker Compose tests fail due to schema changes, rebuild Docker images first: `./scripts/docker-build.sh`
+- Run `./services/msgcore/scripts/test-integration.sh local` and verify all tests pass
+- Run `./services/msgcore/scripts/test-integration.sh compose` and verify all tests pass in Docker
+- If Docker Compose tests fail due to schema changes, rebuild Docker images first: `./services/msgcore/scripts/docker-build.sh`
 - No exceptions - if tests fail, fix them before committing
 
 ### NEVER BLAME "PRE-EXISTING FAILURES"
@@ -116,7 +116,7 @@ MsgCore is a standalone conversation/messaging service. It provides generic conv
 
 **Code Principles:**
 
-- **NO CLASSES** - Use functional style with strict types
+- **Functional modules** - Use functional style with strict types. C# classes are limited to framework boundaries such as EF entities, DbContext and serializer contexts.
 - **NO DYNAMIC IMPORTS** - Always use static imports
 - **PREFER FUNCTIONS** - Export functions from modules
 - **USE RESULT TYPES** - For error handling
@@ -180,8 +180,8 @@ When you encounter linting, type, or test errors, the solution is ALWAYS to fix 
 
 ### Database Conventions
 
-- **SQLite** for development/initial deployment (via Tinqer)
-- **All SQL via Tinqer** - Never write raw SQL
+- **SQLite** retains the unchanged Knex schema. Node uses Tinqer; C# uses EF LINQ and generated persistence rows.
+- **Product queries** - Node uses Tinqer; C# uses EF LINQ. Knex alone owns schema changes.
 - **Raw SQL exception**: Complex joins, UPSERT, or queries where Tinqer lacks support. Use named parameters (`:paramName`) for raw SQL.
 - **Repository Pattern** - Types with SQLite implementation
 - **Singular table names**: lowercase (e.g., `conversation`, `message`, `user_activity`)
@@ -216,7 +216,7 @@ When you encounter linting, type, or test errors, the solution is ALWAYS to fix 
 ./scripts/clean.sh
 
 # Start server
-./scripts/start.sh
+./services/msgcore/scripts/start.sh
 
 # Lint entire project
 ./scripts/lint-all.sh           # Run ESLint on all packages
@@ -226,11 +226,11 @@ When you encounter linting, type, or test errors, the solution is ALWAYS to fix 
 ./scripts/format-all.sh
 
 # Docker commands
-./scripts/docker-build.sh       # Build Docker images (msgcore-migrations, msgcore)
+./services/msgcore/scripts/docker-build.sh       # Build Docker images (msgcore-migrations, msgcore)
 
 # Integration tests
-./scripts/test-integration.sh local    # Run tests with local server
-./scripts/test-integration.sh compose  # Run tests against Docker Compose
+./services/msgcore/scripts/test-integration.sh local    # Run tests with local server
+./services/msgcore/scripts/test-integration.sh compose  # Run tests against Docker Compose
 ```
 
 ### Monitoring Long-Running Operations
@@ -293,18 +293,18 @@ After pushing a feature branch, provide this URL to the user so they can create 
 
 ### Project Structure
 
-```
-msgcore/
-├── node/                    # Monorepo packages
-│   └── packages/
-│       ├── msgcore-server/  # GraphQL API server
-│       ├── msgcore-db/      # Database layer
-│       ├── msgcore-logger/  # Structured logging
-│       └── msgcore-test-utils/ # Test utilities
-├── database/                # Migrations
-│   └── msgcore/              # Knexfile and migrations
-├── scripts/                 # Build and utility scripts
-└── devenv/                  # Development Docker Compose setup
+The canonical product root is `services/msgcore/`. All paths below refer to its Node implementation, database and shared tooling. The C# subtree follows the same apps/packages/build/scripts/tests structure as Snapped, Persona and TapTap. Root README.md owns the current commands and layout.
+
+```text
+services/msgcore/
+  package.json
+  node/{apps,packages,tests,scripts}/
+  csharp/{apps,packages,build,scripts,tests}/
+  database/msgcore/sqlite/migrations/
+  knexfile.msgcore.mjs
+  docker/
+  scripts/
+  tests/contracts/
 ```
 
 ### Temporary Directories (gitignored)

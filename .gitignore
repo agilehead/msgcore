@@ -46,3 +46,8 @@ src/generated/
 
 # Docker devenv data
 devenv/data/
+
+**/.analysis/
+services/msgcore/csharp/**/bin/
+services/msgcore/csharp/**/obj/
+services/msgcore/docker/data/

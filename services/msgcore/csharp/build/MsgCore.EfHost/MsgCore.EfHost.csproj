@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj/**;bin/**</DefaultItemExcludes>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../MsgCore.EfCompiler/MsgCore.EfCompiler.csproj" />
+    <ProjectReference Include="../../packages/MsgCore.AdapterSqlite/MsgCore.AdapterSqlite.csproj" />
+    <ProjectReference Include="$(MsgCoreEfTargetProject)" Condition="'$(MsgCoreEfTargetProject)'!='' And '$(MsgCoreEfTargetName)'!='MsgCore.AdapterSqlite'" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" IncludeAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" PrivateAssets="all" GeneratePathProperty="true" ExcludeAssets="contentFiles" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(PkgMicrosoft_CodeAnalysis_Workspaces_MSBuild)/contentFiles/any/any/BuildHost-netcore/**/*"
+             Link="BuildHost-netcore/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -5,18 +5,26 @@
   "type": "module",
   "private": true,
   "workspaces": [
-    "node/packages/*"
+    "services/*",
+    "services/*/apps/*",
+    "services/*/node/apps/*",
+    "services/*/node/packages/*"
   ],
   "scripts": {
-    "build": "./scripts/build.sh",
+    "build": "npm run verify:structure && ./scripts/build.sh --no-format && node services/msgcore/csharp/scripts/generate-model.mjs --check && dotnet build MsgCore.CSharp.slnx --disable-build-servers -p:UseSharedCompilation=false",
     "clean": "./scripts/clean.sh",
-    "start": "./scripts/start.sh",
-    "test": "cd node/packages/msgcore-server && npm test",
-    "test:grep": "cd node/packages/msgcore-server && npm run test:grep",
-    "migrate:msgcore:latest": "knex migrate:latest --knexfile database/msgcore/knexfile.js",
-    "migrate:msgcore:rollback": "knex migrate:rollback --knexfile database/msgcore/knexfile.js",
-    "migrate:msgcore:status": "knex migrate:status --knexfile database/msgcore/knexfile.js",
-    "migrate:msgcore:make": "knex migrate:make --knexfile database/msgcore/knexfile.js"
+    "start": "./services/msgcore/scripts/start.sh",
+    "test": "node services/msgcore/scripts/test-services.mjs",
+    "test:grep": "cd services/msgcore/node/apps/server && npm run test:grep",
+    "migrate:msgcore:latest": "knex migrate:latest --knexfile services/msgcore/knexfile.msgcore.mjs",
+    "migrate:msgcore:rollback": "knex migrate:rollback --knexfile services/msgcore/knexfile.msgcore.mjs",
+    "migrate:msgcore:status": "knex migrate:status --knexfile services/msgcore/knexfile.msgcore.mjs",
+    "migrate:msgcore:make": "knex migrate:make --knexfile services/msgcore/knexfile.msgcore.mjs",
+    "build:native": "node services/msgcore/csharp/scripts/publish-native.mjs",
+    "test:integration": "./services/msgcore/scripts/test-integration.sh compose",
+    "lint": "./scripts/lint-all.sh && ./node_modules/.bin/eslint \"services/msgcore/**/*.mjs\"",
+    "verify:structure": "node scripts/verify-structure.mjs",
+    "format": "./scripts/format-all.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
@@ -26,7 +34,6 @@
     "chai": "^5.1.2",
     "eslint": "^9.17.0",
     "globals": "^15.14.0",
-    "knex": "^3.1.0",
     "mocha": "^10.8.2",
     "prettier": "^3.4.2",
     "typescript": "^5.9.2",
@@ -34,7 +41,8 @@
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "knex": "^3.1.0"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -50,5 +58,10 @@
     "typescript"
   ],
   "author": "Agilehead",
-  "license": "MIT"
+  "license": "MIT",
+  "allowScripts": {
+    "better-sqlite3@11.10.0": true,
+    "esbuild@0.27.3": true,
+    "@apollo/protobufjs@1.2.7": true
+  }
 }

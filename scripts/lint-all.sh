@@ -19,6 +19,7 @@ PACKAGES=(
   "msgcore-db"
   "msgcore-test-utils"
   "msgcore-server"
+  "msgcore-client"
 )
 
 # Determine if --fix flag is passed
@@ -29,7 +30,8 @@ fi
 
 # Loop through each package and run lint
 for pkg_name in "${PACKAGES[@]}"; do
-  pkg="node/packages/$pkg_name"
+  pkg="services/msgcore/node/packages/$pkg_name"
+  if [[ "$pkg_name" == "msgcore-server" ]]; then pkg="services/msgcore/node/apps/server"; fi
   if [[ ! -d "$pkg" ]]; then
     echo "Package $pkg not found, skipping."
     continue

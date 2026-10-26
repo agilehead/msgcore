@@ -38,10 +38,11 @@ tsconfig*.json
 !tsconfig.base.json
 
 # Test files
-**/*.test.ts
-**/*.spec.ts
-**/tests/
 
 # Logs
 *.log
 logs/
+
+services/msgcore/csharp/**/bin/
+services/msgcore/csharp/**/obj/
+**/devenv/

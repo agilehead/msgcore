@@ -6,7 +6,7 @@ This document outlines the coding standards and patterns used throughout the Msg
 
 ### 1. Functional Programming First
 
-**NO CLASSES** - Use functions and modules exclusively.
+Use functional modules and immutable records. C# classes are permitted where EF, ASP.NET, GraphQL.NET or source-generated serialization requires them. Native storage ports consistently return Result<T> and carry cancellation tokens. EF LINQ owns native application queries; Knex owns the schema. Node retains its existing Tinqer implementation as an explicit comparison target.
 
 ```typescript
 // Good - Pure function with explicit dependencies

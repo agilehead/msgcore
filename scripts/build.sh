@@ -18,9 +18,7 @@ echo "=== Building MsgCore ==="
 # Define the build order
 PACKAGES=(
   "msgcore-logger"
-  "msgcore-db"
   "msgcore-test-utils"
-  "msgcore-server"
   "msgcore-client"
 )
 
@@ -43,7 +41,6 @@ fi
 # 3 ▸ build each package that defines a build script, in order
 for pkg_name in "${PACKAGES[@]}"; do
   pkg="services/msgcore/node/packages/$pkg_name"
-  if [[ "$pkg_name" == "msgcore-server" ]]; then pkg="services/msgcore/node/apps/server"; fi
   if [[ ! -f "$pkg/package.json" ]]; then
     continue
   fi
@@ -60,7 +57,6 @@ done
 echo "Verifying test files compile with strict mode…"
 for pkg_name in "${PACKAGES[@]}"; do
   pkg="services/msgcore/node/packages/$pkg_name"
-  if [[ "$pkg_name" == "msgcore-server" ]]; then pkg="services/msgcore/node/apps/server"; fi
   if [[ ! -f "$pkg/package.json" ]]; then
     continue
   fi

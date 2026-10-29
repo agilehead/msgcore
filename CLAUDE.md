@@ -180,10 +180,9 @@ When you encounter linting, type, or test errors, the solution is ALWAYS to fix 
 
 ### Database Conventions
 
-- **SQLite** retains the unchanged Knex schema. Node uses Tinqer; C# uses EF LINQ and generated persistence rows.
-- **Product queries** - Node uses Tinqer; C# uses EF LINQ. Knex alone owns schema changes.
-- **Raw SQL exception**: Complex joins, UPSERT, or queries where Tinqer lacks support. Use named parameters (`:paramName`) for raw SQL.
-- **Repository Pattern** - Types with SQLite implementation
+- **SQLite** retains the unchanged Knex schema. C# uses EF LINQ and generated persistence rows.
+- **Product queries** use EF LINQ; Knex alone owns schema changes.
+- **Repository Pattern** - Functional ports with a SQLite implementation
 - **Singular table names**: lowercase (e.g., `conversation`, `message`, `user_activity`)
 - **Column names**: snake_case for all columns
 - **Random hex IDs** for records (`randomBytes(8).toString("hex")`)
@@ -199,9 +198,8 @@ When you encounter linting, type, or test errors, the solution is ALWAYS to fix 
 
 ### GraphQL Architecture
 
-- **Single schema file** (`src/schema.graphql`)
-- **Type generation** with graphql-codegen
-- **Context pattern** for database, auth, and repositories
+- **Single schema file** (`services/msgcore/contracts/graphql/public/schema.graphql`)
+- **C# GraphQL adapter** for API execution
 
 ## Essential Commands & Workflow
 
@@ -259,7 +257,8 @@ npm run migrate:msgcore:rollback
 npm test
 
 # Run specific tests
-npm run test:grep -- "pattern to match"
+node services/msgcore/scripts/test-services.mjs csharp
+node services/msgcore/scripts/test-services.mjs nativeaot
 ```
 
 ### Git Workflow
@@ -293,18 +292,20 @@ After pushing a feature branch, provide this URL to the user so they can create 
 
 ### Project Structure
 
-The canonical product root is `services/msgcore/`. All paths below refer to its Node implementation, database and shared tooling. The C# subtree follows the same apps/packages/build/scripts/tests structure as Snapped, Persona and TapTap. Root README.md owns the current commands and layout.
+The canonical product root is `services/msgcore/`. The C# subtree follows the same apps/packages/build/scripts/tests structure as Snapped, Persona and TapTap. Root README.md owns the current commands and layout.
 
 ```text
 services/msgcore/
   package.json
-  node/{apps,packages,tests,scripts}/
+  node/packages/                TypeScript SDK and test tooling
   csharp/{apps,packages,build,scripts,tests}/
+  contracts/graphql/
+  database/msgcore/sqlite/schema.d.ts
   database/msgcore/sqlite/migrations/
   knexfile.msgcore.mjs
   docker/
   scripts/
-  tests/contracts/
+  tests/{contracts,http}/
 ```
 
 ### Temporary Directories (gitignored)
@@ -324,26 +325,7 @@ These directories are excluded from git and used for temporary data:
 
 ### Repository Pattern
 
-```typescript
-// Type definition
-export type ConversationRepository = {
-  create(data: CreateConversationData): ConversationRow;
-  findById(id: string): ConversationRow | null;
-  findByContext(contextType: string, contextId: string): ConversationRow[];
-  findByUserId(userId: string, options: FindOptions): { rows: ConversationRow[]; totalCount: number };
-  updateLastMessageAt(id: string, timestamp: string): void;
-};
-
-// Factory function
-export function createConversationRepository(db: SQLiteDatabase): ConversationRepository {
-  return {
-    create(data) {
-      // Tinqer query implementation
-    },
-    // ...
-  };
-}
-```
+The domain owns immutable function-delegate ports; the SQLite adapter implements them using EF LINQ, cancellation and `Result<T>`.
 
 ## Environment Variables
 
@@ -369,68 +351,11 @@ See `.env.example` for complete list. Key variables:
 - `LOG_LEVEL` - Log level (default: info)
 - `MSGCORE_LOG_FILE_DIR` - Directory for log files (optional)
 
-## Code Patterns
-
-### Import Patterns
-
-```typescript
-// Always include .js extension
-import { createConversationRepository } from "./repositories/sqlite/conversation.js";
-import type { ConversationRow } from "@agilehead/msgcore-db";
-```
-
-### Result Type Pattern
-
-```typescript
-export type Result<T, E = Error> = { success: true; data: T } | { success: false; error: E };
-
-export async function doSomething(): Promise<Result<Data>> {
-  if (error) {
-    return {
-      success: false,
-      error: new Error("Description"),
-    };
-  }
-  return { success: true, data: result };
-}
-```
-
-### Tinqer Query Pattern
-
-```typescript
-import { executeSelect } from "@tinqerjs/better-sqlite3-adapter";
-import { schema, type SQLiteDatabase } from "@agilehead/msgcore-db";
-
-export function findById(db: SQLiteDatabase, id: string): ConversationRow | null {
-  const rows = executeSelect(
-    db,
-    schema,
-    (q, p) =>
-      q
-        .from("conversation")
-        .where((c) => c.id === p.id)
-        .select((c) => ({
-          id: c.id,
-          context_type: c.context_type,
-          context_id: c.context_id,
-          title: c.title,
-          created_by: c.created_by,
-          last_message_at: c.last_message_at,
-          created_at: c.created_at,
-        }))
-        .take(1),
-    { id },
-  );
-
-  return rows.length > 0 ? (rows[0] as unknown as ConversationRow) : null;
-}
-```
-
 ## Testing Strategy
 
 ### Unit Tests
 
-- Repository functions (conversation, message, user-activity)
+- The C# probe checks conversation, message and activity storage and authentication.
 
 ### Integration Tests
 
@@ -440,6 +365,4 @@ export function findById(db: SQLiteDatabase, id: string): ConversationRow | null
 
 ### Test Infrastructure
 
-- Tests run against a local test server (port 5017) or an external Docker container
-- `truncateAllTables()` clears all tables between tests
-- `TEST_URL` and `TEST_DB_PATH` env vars for external mode (Docker Compose)
+- Acceptance runs against managed .NET and actual NativeAOT locally and in Docker, using disposable migrated databases.

@@ -1,7 +1,7 @@
 # MsgCore workspace
 
 Ctlflow defines service ownership. Product source belongs under services/msgcore/:
-node/{apps,packages,tests,scripts}, csharp/{apps,packages,build,scripts,tests},
+node/packages, csharp/{apps,packages,build,scripts,tests},
 database/msgcore/sqlite/migrations, knexfile.msgcore.mjs, docker, scripts and
 tests/contracts. Root owns workspace orchestration and documentation.
 
@@ -14,7 +14,8 @@ GraphQL and serialization boundaries. The pinned EF compiler is build-only.
 Preserve API responses, original Knex migration bytes/history, stored SQLite
 representations and production mounts. Knex alone owns schema changes. Native
 startup requires an existing database and never runs migrations or seeds. Node
-is an explicit comparison target and SDK owner, never a native fallback.
+remains for SDK/test tooling and one-shot Knex migrations, never an application
+server or native fallback. Exercise the same source as managed .NET and NativeAOT.
 
 Read CLAUDE.md, README.md and CODING-STANDARDS.md. No production reset. Verify a
 backup before any production data change. Deploy only when explicitly authorized;

@@ -14,10 +14,11 @@ echo "=== Formatting MsgCore ==="
 # Source and tests follow the product's implementation owner.
 ./node_modules/.bin/prettier "$MODE" --ignore-unknown --no-error-on-unmatched-pattern \
   "*.json" "scripts/*.mjs" \
-  "services/msgcore/node/{apps,packages}/*/src/**/*.ts" \
-  "services/msgcore/node/{apps,packages}/*/package.json" \
+  "services/msgcore/node/packages/*/src/**/*.ts" \
+  "services/msgcore/node/packages/*/package.json" \
   "services/msgcore/node/packages/*/tests/**/*.ts" \
-  "services/msgcore/node/tests/**/*.ts" \
+  "services/msgcore/tests/**/*.ts" \
+  "services/msgcore/database/**/*.ts" \
   "services/msgcore/**/*.mjs"
 
 echo "=== Formatting completed ==="

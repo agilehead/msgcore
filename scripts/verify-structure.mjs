@@ -11,20 +11,21 @@ const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 assert.deepEqual(manifest.workspaces, [
   "services/*",
   "services/*/apps/*",
-  "services/*/node/apps/*",
   "services/*/node/packages/*",
 ]);
-for (const file of [
+const required = [
   `${owner}/package.json`,
-  `${owner}/node/apps/server/package.json`,
-  `${owner}/node/apps/server/src/bin/server.ts`,
+  `${owner}/database/${product}/sqlite/schema.d.ts`,
   `${owner}/csharp/Dockerfile`,
-  `${owner}/docker/development/docker-compose.yml`,
   `${owner}/knexfile.${product}.mjs`,
-])
+  `${owner}/contracts/graphql/public/schema.graphql`,
+  `${owner}/docker/development/docker-compose.yml`,
+];
+for (const file of required)
   assert(existsSync(join(root, file)), `Missing canonical owner: ${file}`);
-for (const directory of ["node/packages", "database", "devenv", "production"]) {
-  const files = execFileSync(
+
+function liveSource(directory) {
+  return execFileSync(
     "git",
     [
       "ls-files",
@@ -36,20 +37,48 @@ for (const directory of ["node/packages", "database", "devenv", "production"]) {
       directory,
     ],
     { cwd: root, encoding: "utf8" },
-  ).split("\0");
-  assert(
-    !files.some((file) => file && existsSync(join(root, file))),
+  )
+    .split("\0")
+    .filter((file) => file && existsSync(join(root, file)));
+}
+assert.equal(
+  liveSource(`${owner}/node/apps`).length,
+  0,
+  "Retired Node application servers must not remain",
+);
+for (const directory of [
+  "node/packages",
+  "database",
+  "devenv",
+  "production",
+  "rust",
+  "e2e",
+])
+  assert.equal(
+    liveSource(directory).length,
+    0,
     `Superseded source owner remains: ${directory}`,
   );
-}
 for (const entry of readdirSync(join(root, owner, "node/packages"), {
   withFileTypes: true,
 })) {
   if (!entry.isDirectory()) continue;
-  const file = join(root, owner, "node/packages", entry.name, "package.json");
-  assert(existsSync(file), `Package has no manifest: ${entry.name}`);
+  const directory = `${owner}/node/packages/${entry.name}`;
+  if (liveSource(directory).length)
+    assert(
+      existsSync(join(root, directory, "package.json")),
+      `Package has no manifest: ${entry.name}`,
+    );
 }
-const solution = readFileSync(join(root, "MsgCore.CSharp.slnx"), "utf8");
+const solutions = readdirSync(root).filter((name) =>
+  name.endsWith(".CSharp.slnx"),
+);
+assert.equal(
+  solutions.length,
+  1,
+  "One C# solution owns the product implementation",
+);
+const solution = readFileSync(join(root, solutions[0]), "utf8");
 for (const match of solution.matchAll(/<Project Path="([^"]+)"/g)) {
   assert(
     match[1].startsWith(`${owner}/csharp/`),

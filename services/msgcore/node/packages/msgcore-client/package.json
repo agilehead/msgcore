@@ -17,18 +17,15 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "mocha --exit",
-    "test:grep": "mocha --exit --grep",
+    "test": "node --import tsx --test --test-concurrency=1 --test-timeout=60000 src/tests/client.test.ts",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix"
   },
   "dependencies": {},
   "devDependencies": {
     "@types/chai": "^5.2.2",
-    "@types/mocha": "^10.0.10",
     "@types/node": "^22.10.5",
     "chai": "^5.2.1",
-    "mocha": "^11.7.1",
     "tsx": "^4.19.4",
     "typescript": "^5.9.2"
   },

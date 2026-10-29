@@ -7,16 +7,16 @@ follow Snapped, Persona and TapTap. Root README.md owns commands and verificatio
 Conversations, Messages and Activity are separate domain/storage features. Kernel
 owns time, IDs, Result<T> and transactions. AdapterAuth verifies HMAC JWTs;
 AdapterHttp owns request identity, CORS and internal routes. AdapterGraphql embeds
-the existing Node SDL and exposes the same transport behavior without ASP.NET.
-No native application query uses handwritten SQL or falls back to Node.
+the service-owned GraphQL SDL and exposes the transport without ASP.NET.
+No native application query uses handwritten SQL.
 
-The four generated mappings are validated against the retained Node database type
+The four generated mappings are validated against the service-owned database type
 and actual immutable Knex schema. The compiled model/query compiler runs only at
 build time. Startup needs an existing database; migrations are never run by the app.
 A managed build is insufficient evidence of NativeAOT behavior: execute the shared
 HTTP bank, native database probe and actual Docker gates before release.
 
 Native images run /app/msgcore; /app/msgcore health is the health probe. Node is
-retained in the separately selected comparison image, SDK and one-shot migration
-runner. Publish msgcore and msgcore-migrations together from the working commit;
+retained for the SDK, test tooling and one-shot migration runner. Publish msgcore
+and msgcore-migrations together from the working commit;
 the shared publisher preflights both before pushing commit and selected tags.

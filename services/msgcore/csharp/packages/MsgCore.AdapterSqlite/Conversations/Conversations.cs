@@ -11,9 +11,11 @@ public static class Conversations
         (id, ct) => Storage.Guard(async () => Optional(await db.Conversation.AsNoTracking().FirstOrDefaultAsync(row => row.Id == id, ct))),
         (contextType, contextId, ids, ct) => Storage.Guard(async () =>
         {
-            var count = ids.Length;
+            var requested = ids.Distinct(StringComparer.Ordinal).ToArray();
+            var count = requested.Length;
             return Optional(await db.Conversation.AsNoTracking().Where(row => row.ContextType == contextType && row.ContextId == contextId
-                && db.ConversationParticipant.Count(participant => participant.ConversationId == row.Id && ids.Contains(participant.UserId)) == count)
+                && db.ConversationParticipant.Count(participant => participant.ConversationId == row.Id) == count
+                && db.ConversationParticipant.Count(participant => participant.ConversationId == row.Id && requested.Contains(participant.UserId)) == count)
                 .FirstOrDefaultAsync(ct));
         }),
         (userId, contextType, search, limit, offset, ct) => Storage.Guard(async () =>

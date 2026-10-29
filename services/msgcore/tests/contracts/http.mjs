@@ -575,5 +575,84 @@ export async function contracts({
     });
     assert.equal(response.status, 413);
   });
+  await check(
+    "context reuse requires the exact participant set on both APIs",
+    async () => {
+      const input = {
+        contextType: "privacy",
+        contextId: "exact-set",
+        participantIds: ["alice", "bob"],
+      };
+      const group = (await data(create, { input }, outsider))
+        .createConversation;
+      const pair = (await data(create, { input }, alice)).createConversation;
+      assert.notEqual(pair.id, group.id);
+      assert.deepEqual(pair.participants.map((p) => p.userId).sort(), [
+        "alice",
+        "bob",
+      ]);
+      await data(send, { id: pair.id, body: "Pair private message" }, alice);
+      assert.equal(
+        (await data(get, { id: pair.id }, outsider)).conversation,
+        null,
+      );
+      assert.equal(
+        (await data(get, { id: group.id }, outsider)).conversation.messages
+          .length,
+        0,
+      );
+      const lookup = `query { conversationByContext(contextType:"privacy",contextId:"exact-set",participantId:"bob") { id } }`;
+      assert.equal((await data(lookup)).conversationByContext.id, pair.id);
+      const repeated = await Promise.all(
+        Array.from({ length: 4 }, () =>
+          data(
+            create,
+            { input: { ...input, participantIds: ["bob", "alice", "bob"] } },
+            alice,
+          ),
+        ),
+      );
+      assert(
+        repeated.every((value) => value.createConversation.id === pair.id),
+      );
+      const subset = (
+        await data(create, { input: { ...input, participantIds: ["alice"] } })
+      ).createConversation;
+      assert.notEqual(subset.id, pair.id);
+      const unrelated = (
+        await data(
+          create,
+          { input: { ...input, participantIds: ["outsider"] } },
+          bob,
+        )
+      ).createConversation;
+      assert.notEqual(unrelated.id, pair.id);
+      for (const [ids, expected] of [
+        [["bob", "alice", "bob"], pair.id],
+        [["outsider", "bob", "alice"], group.id],
+      ]) {
+        const response = await internal("/conversation", "POST", {
+          createdBy: "alice",
+          participantIds: ids,
+          contextType: input.contextType,
+          contextId: input.contextId,
+        });
+        assert.equal(response.status, 200);
+        assert.equal(response.value.id, expected);
+      }
+      const fresh = {
+        ...input,
+        contextId: "concurrent-new",
+        participantIds: ["bob"],
+      };
+      const concurrent = await Promise.all(
+        Array.from({ length: 4 }, () => data(create, { input: fresh })),
+      );
+      assert.equal(
+        new Set(concurrent.map((value) => value.createConversation.id)).size,
+        1,
+      );
+    },
+  );
   return passed;
 }

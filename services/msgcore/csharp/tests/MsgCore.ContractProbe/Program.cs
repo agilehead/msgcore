@@ -35,7 +35,9 @@ Check(conversation.CreatedAt == "2026-10-26T00:00:00.123Z", "existing ISO stored
 Check(Value(await conversations.Participants(conversation.Id, ct)).Count == 2, "composite participants");
 Check(Value(await conversations.Participant(conversation.Id, "bob", ct))?.DisplayName == "Bób", "Unicode display name");
 Check(Value(await conversations.FindByContext("item", "item-1", ["bob", "alice"], ct))?.Id == conversation.Id, "captured array query");
-Check(Value(await conversations.FindByContext("item", "item-1", [], ct))?.Id == conversation.Id, "empty captured array query");
+Check(Value(await conversations.FindByContext("item", "item-1", [], ct)) is null, "empty participant set cannot match a populated conversation");
+Check(Value(await conversations.FindByContext("item", "item-1", ["alice", "bob", "bob"], ct))?.Id == conversation.Id, "duplicate requested participants are normalized");
+Check(Value(await conversations.FindByContext("item", "item-1", ["alice"], ct)) is null, "participant subset cannot reuse a conversation");
 Check(Value(await conversations.FindByContext("item", "item-1", ["missing"], ct)) is null, "unmatched captured array");
 var existing = Value(await ConversationOperations.Create(conversations, unit, "alice", ["bob"], "item", "item-1", null,
     new Dictionary<string, string>(), ct));

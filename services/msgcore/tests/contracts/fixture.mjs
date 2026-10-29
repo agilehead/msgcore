@@ -3,7 +3,6 @@ import { dirname } from "node:path";
 export const modes = ["single", "production"];
 export const secret = "test-jwt-secret";
 export const internalSecret = "test-internal-secret";
-export const nodeArguments = [];
 
 export function environment(port, database, mode) {
   return {

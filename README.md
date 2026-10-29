@@ -9,11 +9,7 @@ preserves the existing SQLite schema, migration history and wire contracts.
 ```text
 services/msgcore/
   node/
-    apps/server/            Retained Node comparison server
-    packages/               Database utilities, logger, SDK and fixtures
-    tests/                  Original service assertions
-    scripts/
-    Dockerfile
+    packages/               TypeScript SDK, logger and test fixtures
   csharp/
     apps/MsgCore.Server/     Thin application composition root
     packages/               Kernel, domain, contracts and adapters
@@ -22,19 +18,21 @@ services/msgcore/
     tests/                  Managed/native database probes
     Dockerfile
   database/msgcore/sqlite/migrations/
+  database/msgcore/sqlite/schema.d.ts
   database/Dockerfile        One-shot Knex schema owner
+  contracts/graphql/        Shared GraphQL schema
   knexfile.msgcore.mjs
   docker/development/docker-compose.yml
   scripts/                  Service orchestration and acceptance
-  tests/contracts/          One cross-runtime HTTP assertion bank
+  tests/{contracts,http}/   Runtime-independent HTTP assertions
 ```
 
 The C# architecture matches Snapped, Persona and TapTap. Domain modules expose
 immutable records of function delegates with Result<T> and cancellation tokens.
 EF adapters map generated persistence rows to domain records. A shared unit of
 work controls multi-write operations. HTTP extracts identity through AdapterAuth;
-AdapterGraphql has no ASP.NET dependency. GraphQL SDL and the TypeScript SDK are
-shared with the retained Node implementation. Native applications never invoke Node.
+AdapterGraphql has no ASP.NET dependency. The GraphQL SDL and TypeScript SDK have
+their own service owners. The application runs as managed .NET or NativeAOT.
 
 ## Build and verify
 
@@ -50,18 +48,16 @@ npm run test:integration
 Use the same .NET 11 RC2, EF 11 RC2 and GraphQL.NET 8.8.5 pins as the other native
 services. Native publishing generates EF compiled models and query interceptors;
 product queries and writes use EF LINQ without handwritten SQL. Mapping generation
-checks the Node contract against a fresh database created by the original Knex
+checks the database contract against a fresh database created by the existing Knex
 migration. Application startup requires an existing database and initializes WAL
 through the provider without creating tables or migration history.
 
-The original service suites and SDK tests remain. Shared HTTP assertions run
-against Node, managed C# and actual NativeAOT binaries. Docker acceptance also
+The HTTP service suite and C# storage probes run against managed .NET and actual
+NativeAOT binaries, alongside the SDK tests. Docker acceptance also
 checks fresh migration mounts, application health, native ELF/no Node/no dotnet,
 clean shutdown, stored representations and complete migration replay preservation.
-Node-only JWT/repository assertions are reported separately from HTTP parity.
 
 ```bash
-node services/msgcore/scripts/test-services.mjs node
 node services/msgcore/scripts/test-services.mjs csharp
 node services/msgcore/scripts/test-services.mjs nativeaot
 node services/msgcore/csharp/scripts/generate-model.mjs
@@ -78,7 +74,6 @@ workspace root in the service launcher and Knex configuration.
 npm run migrate:msgcore:latest
 npm start
 ./services/msgcore/scripts/start.sh nativeaot
-./services/msgcore/scripts/start.sh node
 ```
 
 Authentication prefers a valid bearer token and falls back to access_token cookies.

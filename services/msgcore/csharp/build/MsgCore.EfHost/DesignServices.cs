@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.EntityFrameworkCore.Scaffolding;
 
 [assembly: DesignTimeServicesReference("MsgCore.EfHost.DesignServices, MsgCore.EfHost")]
 
@@ -14,5 +15,8 @@ namespace MsgCore.EfHost;
 public sealed class DesignServices : IDesignTimeServices
 {
     public void ConfigureDesignTimeServices(IServiceCollection services)
-        => services.Replace(ServiceDescriptor.Singleton<IPrecompiledQueryCodeGenerator, MsgCorePrecompiledQueryCodeGenerator>());
+    {
+        services.Replace(ServiceDescriptor.Singleton<IPrecompiledQueryCodeGenerator, MsgCorePrecompiledQueryCodeGenerator>());
+        services.Replace(ServiceDescriptor.Singleton<ICompiledModelCodeGenerator, NativeCompiledModelGenerator>());
+    }
 }

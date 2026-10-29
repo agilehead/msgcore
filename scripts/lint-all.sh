@@ -16,9 +16,7 @@ echo "=== Linting MsgCore ==="
 # Define the package order
 PACKAGES=(
   "msgcore-logger"
-  "msgcore-db"
   "msgcore-test-utils"
-  "msgcore-server"
   "msgcore-client"
 )
 
@@ -31,7 +29,6 @@ fi
 # Loop through each package and run lint
 for pkg_name in "${PACKAGES[@]}"; do
   pkg="services/msgcore/node/packages/$pkg_name"
-  if [[ "$pkg_name" == "msgcore-server" ]]; then pkg="services/msgcore/node/apps/server"; fi
   if [[ ! -d "$pkg" ]]; then
     echo "Package $pkg not found, skipping."
     continue

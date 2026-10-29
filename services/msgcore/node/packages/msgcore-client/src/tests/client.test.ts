@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { expect } from "chai";
 import { createMsgCoreClient, createNoOpMsgCoreClient } from "../client.js";
 import type {
@@ -102,7 +103,7 @@ function createTestClient(): MsgCoreClient {
   });
 }
 
-describe("MsgCoreClient", () => {
+void describe("MsgCoreClient", () => {
   beforeEach(() => {
     mockFetch();
   });
@@ -111,8 +112,8 @@ describe("MsgCoreClient", () => {
     restoreFetch();
   });
 
-  describe("GraphQL reads", () => {
-    it("should fetch a conversation by id", async () => {
+  void describe("GraphQL reads", () => {
+    void it("should fetch a conversation by id", async () => {
       fetchResponse = {
         status: 200,
         body: { data: { conversation: sampleConversation } },
@@ -142,7 +143,7 @@ describe("MsgCoreClient", () => {
       expect(body.query).to.include("conversation(id: $id)");
     });
 
-    it("should return null for a non-existent conversation", async () => {
+    void it("should return null for a non-existent conversation", async () => {
       fetchResponse = {
         status: 200,
         body: { data: { conversation: null } },
@@ -156,7 +157,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should fetch a conversation by context", async () => {
+    void it("should fetch a conversation by context", async () => {
       fetchResponse = {
         status: 200,
         body: { data: { conversationByContext: sampleConversation } },
@@ -185,7 +186,7 @@ describe("MsgCoreClient", () => {
       expect(body.query).to.include("conversationByContext(");
     });
 
-    it("should fetch my conversations with pagination", async () => {
+    void it("should fetch my conversations with pagination", async () => {
       const connection: ConversationConnection = {
         nodes: [sampleConversation],
         totalCount: 1,
@@ -217,7 +218,7 @@ describe("MsgCoreClient", () => {
       expect(body.variables.offset).to.equal(0);
     });
 
-    it("should fetch activity counts", async () => {
+    void it("should fetch activity counts", async () => {
       fetchResponse = {
         status: 200,
         body: { data: { activityCounts: { newConversationCount: 5 } } },
@@ -232,8 +233,8 @@ describe("MsgCoreClient", () => {
     });
   });
 
-  describe("GraphQL mutations", () => {
-    it("should mark a conversation as seen", async () => {
+  void describe("GraphQL mutations", () => {
+    void it("should mark a conversation as seen", async () => {
       fetchResponse = {
         status: 200,
         body: { data: { markConversationSeen: true } },
@@ -255,7 +256,7 @@ describe("MsgCoreClient", () => {
       expect(body.query).to.include("markConversationSeen(");
     });
 
-    it("should mark all conversations as seen", async () => {
+    void it("should mark all conversations as seen", async () => {
       fetchResponse = {
         status: 200,
         body: { data: { markAllSeen: true } },
@@ -273,7 +274,7 @@ describe("MsgCoreClient", () => {
       expect(body.query).to.include("markAllSeen");
     });
 
-    it("should delete own message", async () => {
+    void it("should delete own message", async () => {
       fetchResponse = {
         status: 200,
         body: { data: { deleteMessage: true } },
@@ -296,8 +297,8 @@ describe("MsgCoreClient", () => {
     });
   });
 
-  describe("Internal REST", () => {
-    it("should get a conversation by id via internal API", async () => {
+  void describe("Internal REST", () => {
+    void it("should get a conversation by id via internal API", async () => {
       fetchResponse = {
         status: 200,
         body: sampleConversation,
@@ -321,7 +322,7 @@ describe("MsgCoreClient", () => {
       expect(headers.Authorization).to.equal(`Bearer ${TEST_SECRET}`);
     });
 
-    it("should return null for non-existent conversation via internal API", async () => {
+    void it("should return null for non-existent conversation via internal API", async () => {
       fetchResponse = {
         status: 404,
         body: { error: "Conversation not found" },
@@ -335,7 +336,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should create a conversation", async () => {
+    void it("should create a conversation", async () => {
       fetchResponse = {
         status: 200,
         body: sampleConversation,
@@ -374,7 +375,7 @@ describe("MsgCoreClient", () => {
       expect(body.createdBy).to.equal("user-1");
     });
 
-    it("should send a message", async () => {
+    void it("should send a message", async () => {
       fetchResponse = {
         status: 200,
         body: sampleMessage,
@@ -397,7 +398,7 @@ describe("MsgCoreClient", () => {
       expect(call.init.method).to.equal("POST");
     });
 
-    it("should delete a message with reason", async () => {
+    void it("should delete a message with reason", async () => {
       fetchResponse = {
         status: 200,
         body: {},
@@ -418,7 +419,7 @@ describe("MsgCoreClient", () => {
       expect(body.reason).to.equal("Inappropriate content");
     });
 
-    it("should delete a message without reason", async () => {
+    void it("should delete a message without reason", async () => {
       fetchResponse = {
         status: 200,
         body: {},
@@ -433,7 +434,7 @@ describe("MsgCoreClient", () => {
       expect(call.init.body).to.equal(undefined);
     });
 
-    it("should anonymize a user", async () => {
+    void it("should anonymize a user", async () => {
       fetchResponse = {
         status: 200,
         body: {},
@@ -452,8 +453,8 @@ describe("MsgCoreClient", () => {
     });
   });
 
-  describe("Error handling", () => {
-    it("should handle HTTP errors from GraphQL endpoint", async () => {
+  void describe("Error handling", () => {
+    void it("should handle HTTP errors from GraphQL endpoint", async () => {
       fetchResponse = {
         status: 500,
         body: "Internal Server Error",
@@ -467,7 +468,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should handle GraphQL errors in response", async () => {
+    void it("should handle GraphQL errors in response", async () => {
       fetchResponse = {
         status: 200,
         body: {
@@ -484,7 +485,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should handle HTTP errors from internal REST endpoint", async () => {
+    void it("should handle HTTP errors from internal REST endpoint", async () => {
       fetchResponse = {
         status: 403,
         body: "Forbidden",
@@ -501,7 +502,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should handle network errors", async () => {
+    void it("should handle network errors", async () => {
       globalThis.fetch = async () => {
         throw new Error("Connection refused");
       };
@@ -514,7 +515,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should handle timeout errors", async () => {
+    void it("should handle timeout errors", async () => {
       globalThis.fetch = async (
         _input: string | URL | Request,
         init?: RequestInit,
@@ -553,7 +554,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should handle network errors on internal REST requests", async () => {
+    void it("should handle network errors on internal REST requests", async () => {
       globalThis.fetch = async () => {
         throw new Error("ECONNREFUSED");
       };
@@ -571,8 +572,8 @@ describe("MsgCoreClient", () => {
     });
   });
 
-  describe("No-op client", () => {
-    it("should return null for getConversation", async () => {
+  void describe("No-op client", () => {
+    void it("should return null for getConversation", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.getConversation("conv-1", TEST_TOKEN);
 
@@ -582,7 +583,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should return null for getConversationInternal", async () => {
+    void it("should return null for getConversationInternal", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.getConversationInternal("conv-1");
 
@@ -592,7 +593,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should return null for getConversationByContext", async () => {
+    void it("should return null for getConversationByContext", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.getConversationByContext(
         "item",
@@ -607,7 +608,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should return empty connection for getMyConversations", async () => {
+    void it("should return empty connection for getMyConversations", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.getMyConversations({}, TEST_TOKEN);
 
@@ -620,7 +621,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should return zero activity counts", async () => {
+    void it("should return zero activity counts", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.getActivityCounts(TEST_TOKEN);
 
@@ -630,7 +631,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should return success for markConversationSeen", async () => {
+    void it("should return success for markConversationSeen", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.markConversationSeen("conv-1", TEST_TOKEN);
 
@@ -640,7 +641,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should return success for markAllSeen", async () => {
+    void it("should return success for markAllSeen", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.markAllSeen(TEST_TOKEN);
 
@@ -650,7 +651,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should return failure for deleteOwnMessage", async () => {
+    void it("should return failure for deleteOwnMessage", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.deleteOwnMessage("msg-1", TEST_TOKEN);
 
@@ -660,7 +661,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should return failure for createConversation", async () => {
+    void it("should return failure for createConversation", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.createConversation({
         participantIds: ["user-1"],
@@ -673,7 +674,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should return failure for sendMessage", async () => {
+    void it("should return failure for sendMessage", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.sendMessage({
         conversationId: "conv-1",
@@ -687,7 +688,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should return failure for deleteMessage", async () => {
+    void it("should return failure for deleteMessage", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.deleteMessage("msg-1");
 
@@ -697,7 +698,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should return failure for anonymizeUser", async () => {
+    void it("should return failure for anonymizeUser", async () => {
       const client = createNoOpMsgCoreClient();
       const result = await client.anonymizeUser("user-1");
 
@@ -707,7 +708,7 @@ describe("MsgCoreClient", () => {
       }
     });
 
-    it("should log warnings when logger is provided", async () => {
+    void it("should log warnings when logger is provided", async () => {
       const warnings: unknown[][] = [];
       const logger = {
         debug: (..._args: unknown[]) => undefined,

@@ -22,11 +22,10 @@ import {
 const selection =
   process.argv[2] ?? process.env.MSGCORE_DOTNET_CONTAINER_TARGET ?? "all";
 assert(
-  ["all", "nativeaot", "managed", "node"].includes(selection),
-  "Choose all, nativeaot, managed or node",
+  ["all", "nativeaot", "managed"].includes(selection),
+  "Choose all, nativeaot or managed",
 );
-const variants =
-  selection === "all" ? ["node", "managed", "nativeaot"] : [selection];
+const variants = selection === "all" ? ["managed", "nativeaot"] : [selection];
 const migrationImage = "msgcore-migrations:acceptance";
 const docker = (args, env = process.env) =>
   execFileSync("docker", args, {
@@ -88,11 +87,9 @@ for (const variant of variants) {
     "docker",
     "build",
     "-f",
-    variant === "node"
-      ? "services/msgcore/node/Dockerfile"
-      : "services/msgcore/csharp/Dockerfile",
+    "services/msgcore/csharp/Dockerfile",
     "--target",
-    variant === "node" ? "production" : variant,
+    variant,
     "-t",
     image,
     ".",
@@ -129,27 +126,6 @@ for (const variant of variants) {
       "-f",
       "services/msgcore/docker/development/docker-compose.yml",
     ];
-    if (variant === "node") {
-      const override = join(database.testDir, "node-health.json");
-      writeFileSync(
-        override,
-        JSON.stringify({
-          services: {
-            msgcore: {
-              healthcheck: {
-                test: [
-                  "CMD",
-                  "node",
-                  "-e",
-                  "require('http').get('http://localhost:5007/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
-                ],
-              },
-            },
-          },
-        }),
-      );
-      compose.push("-f", override);
-    }
     let initialized = false;
     try {
       await run(["docker", ...compose, "run", "--rm", "msgcore-migrations"], {
@@ -207,16 +183,14 @@ for (const variant of variants) {
         docker(["inspect", "--format", "{{.State.Health.Status}}", container]),
         "healthy",
       );
-      if (variant !== "node") {
-        docker(["exec", container, "/app/msgcore", "health"]);
-        docker([
-          "exec",
-          container,
-          "/bin/sh",
-          "-c",
-          "if command -v node; then exit 1; fi",
-        ]);
-      }
+      docker(["exec", container, "/app/msgcore", "health"]);
+      docker([
+        "exec",
+        container,
+        "/bin/sh",
+        "-c",
+        "if command -v node; then exit 1; fi",
+      ]);
       if (variant === "nativeaot") {
         docker([
           "exec",
@@ -249,19 +223,16 @@ for (const variant of variants) {
         inspect.close();
       }
       if (mode === modes[0]) {
-        await run(
-          ["npm", "run", "test", "--workspace", "@agilehead/msgcore-server"],
-          {
-            env: {
-              ...process.env,
-              ...fixture,
-              TEST_URL: url,
-              TEST_DB_PATH: database.dbPath,
-              TEST_INTERNAL_SECRET: internalSecret,
-              TEST_JWT_SECRET: secret,
-            },
+        await run(["npm", "run", "test:http"], {
+          env: {
+            ...process.env,
+            ...fixture,
+            TEST_URL: url,
+            TEST_DB_PATH: database.dbPath,
+            TEST_INTERNAL_SECRET: internalSecret,
+            TEST_JWT_SECRET: secret,
           },
-        );
+        });
         truncateAllTables(database);
       }
       passed += await contracts({
@@ -314,16 +285,6 @@ for (const variant of variants) {
         console.error(
           docker(["inspect", "--format", "{{json .State}}", container]),
         );
-        if (variant === "node")
-          console.error(
-            docker([
-              "exec",
-              container,
-              "node",
-              "-e",
-              "Promise.all(['localhost','127.0.0.1'].map(host=>fetch('http://'+host+':5007/health').then(response=>console.info(host,response.status)).catch(error=>console.error(host,error.message))))",
-            ]),
-          );
       }
       throw error;
     } finally {
@@ -333,7 +294,7 @@ for (const variant of variants) {
   }
   total += passed;
   console.info(
-    `msgcore Docker ${variant}: ${passed} shared HTTP contract cases passed; healthy and clean shutdown; ${variant === "node" ? "explicit Node comparison image" : "no Node in the application image"}`,
+    `msgcore Docker ${variant}: ${passed} shared HTTP contract cases passed; healthy and clean shutdown; no Node in the application image`,
   );
 }
 console.info(`msgcore Docker: ${total} shared HTTP contract cases passed`);

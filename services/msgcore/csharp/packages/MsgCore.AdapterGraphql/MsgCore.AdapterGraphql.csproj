@@ -4,6 +4,6 @@
     <ProjectReference Include="../MsgCore.Contracts/MsgCore.Contracts.csproj" />
     <PackageReference Include="GraphQL" />
     <PackageReference Include="GraphQL.SystemTextJson" />
-    <EmbeddedResource Include="../../../node/apps/server/src/schema.graphql" LogicalName="Public.Schema.graphql" />
+    <EmbeddedResource Include="../../../contracts/graphql/public/schema.graphql" LogicalName="Public.Schema.graphql" />
   </ItemGroup>
 </Project>

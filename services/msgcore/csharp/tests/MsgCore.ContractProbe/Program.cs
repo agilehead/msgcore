@@ -3,11 +3,14 @@ using MsgCore.AdapterAuth;
 using MsgCore.Domain.Conversations;
 using MsgCore.Domain.Messages;
 using MsgCore.Kernel;
+using System.Security.Cryptography;
+using System.Text;
 
 var path = Path.GetFullPath(args.Single());
 Storage.Initialize(path);
 await using var db = Storage.Open(path);
-var clock = new Clock(() => DateTimeOffset.Parse("2026-10-26T00:00:00.123Z", System.Globalization.CultureInfo.InvariantCulture));
+var now = DateTimeOffset.Parse("2026-10-26T00:00:00.123Z", System.Globalization.CultureInfo.InvariantCulture);
+var clock = new Clock(() => now);
 var conversations = MsgCore.AdapterSqlite.Conversations.Conversations.Create(db, clock);
 var messages = MsgCore.AdapterSqlite.Messages.Messages.Create(db, clock);
 var activity = MsgCore.AdapterSqlite.Activity.Activities.Create(db, clock);
@@ -58,7 +61,8 @@ Check(Value(await activity.CountNew("bob", ct)) == 1, "activity independent of c
 Value(await unit.Run(token => activity.MarkAllSeen("bob", "2099-01-01T00:00:00.000Z", token), ct));
 Check(Value(await activity.CountNew("bob", ct)) == 0, "activity marker");
 Value(await unit.Run(token => activity.MarkAllSeen("bob", "2000-01-01T00:00:00.000Z", token), ct));
-Check(Value(await activity.CountNew("bob", ct)) == 1, "activity upsert");
+Check(Value(await activity.CountNew("bob", ct)) == 1
+    && Value(await activity.Find("bob", ct))?.LastSeenAt == "2000-01-01T00:00:00.000Z", "activity upsert");
 Value(await unit.Run(token => messages.Anonymize("alice", token), ct));
 var anonymous = Value(await messages.Find(message.Id, ct));
 Check(anonymous is { SenderId: "anonymous", Body: "[anonymized]", Metadata: null, IsDeleted: true }, "anonymization preserves deletion flag");
@@ -77,4 +81,36 @@ try { await conversations.Find(conversation.Id, canceled.Token); }
 catch (OperationCanceledException) { cancellationObserved = true; }
 Check(cancellationObserved, "cancellation propagation");
 Check(Tokens.Verify("malformed", "secret", clock.UtcNow()) is null, "malformed authentication");
+Check(Value(await conversations.Find("missing", ct)) is null, "missing conversation");
+Check(Value(await conversations.Participant(conversation.Id, "outsider", ct)) is null, "missing participant");
+Check(Value(await activity.Find("no-activity", ct)) is null && Value(await activity.CountNew("no-activity", ct)) == 0,
+    "missing activity and unread count");
+for (var index = 0; index < 5; index++)
+    Value(await conversations.Create(new ConversationInput($"page-{index}", index == 4 ? "order" : "item", $"page-context-{index}",
+        index == 2 ? "About selling a bike" : $"Conversation {index}", "page-user", [new ParticipantInput("page-user", "Page User")]), ct));
+var page = Value(await conversations.List("page-user", null, null, 3, 0, ct));
+Check(page.TotalCount == 5 && page.Rows.Count == 3, "conversation total and page limit");
+Check(Value(await conversations.List("page-user", "item", null, 20, 0, ct)).TotalCount == 4, "context type filter");
+Check(Value(await conversations.List("page-user", null, "bike", 20, 0, ct)).Rows.Single().Id == "page-2", "title search filter");
+Value(await conversations.Touch("page-0", "2026-11-01T00:00:00.000Z", ct));
+Check(Value(await conversations.Find("page-0", ct))?.LastMessageAt == "2026-11-01T00:00:00.000Z", "last-message timestamp update");
+Check(Value(await messages.Find("missing", ct)) is null, "missing message");
+var firstOrdered = Value(await messages.Create(new MessageInput("ordered-first", "page-0", "page-user", "first", null, null), ct));
+now = now.AddSeconds(1);
+var secondOrdered = Value(await messages.Create(new MessageInput("ordered-second", "page-0", "page-user", "second", null, firstOrdered.Id), ct));
+var ordered = Value(await messages.List("page-0", ct));
+Check(ordered.Count == 2 && ordered[0].Id == firstOrdered.Id && ordered[1].Id == secondOrdered.Id
+    && secondOrdered.ReplyTo == firstOrdered.Id, "message ordering and replies");
+string Signed(string payload, string secret)
+{
+    static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    var prefix = Base64Url(Encoding.UTF8.GetBytes("{\"alg\":\"HS256\"}")) + "." + Base64Url(Encoding.UTF8.GetBytes(payload));
+    return prefix + "." + Base64Url(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.ASCII.GetBytes(prefix)));
+}
+var signed = Signed("{\"sub\":\"identity\",\"userId\":\"application\",\"tenant\":\"tenant-a\"}", "secret");
+Check(Tokens.Verify(signed, "secret", clock.UtcNow()) is { UserId: "application", Tenant: "tenant-a" }, "JWT application identity and tenant");
+Check(Tokens.Verify(Signed("{\"sub\":\"fallback\"}", "secret"), "secret", clock.UtcNow()) is { UserId: "fallback", Tenant: null }, "JWT subject fallback");
+Check(Tokens.Verify(Signed("{\"email\":\"no-identity\"}", "secret"), "secret", clock.UtcNow()) is null
+    && Tokens.Verify(Signed("{\"userId\":\"alice\",\"exp\":1}", "secret"), "secret", clock.UtcNow()) is null
+    && Tokens.Verify(signed, "wrong", clock.UtcNow()) is null, "JWT identity, expiry and signature rejection");
 Console.WriteLine($"MsgCore probe: {count} assertions passed");

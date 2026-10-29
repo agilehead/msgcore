@@ -18,7 +18,7 @@ const check = process.argv.includes("--check");
 const source = ts.createSourceFile(
   "schema.ts",
   readFileSync(
-    join(root, "services/msgcore/node/packages/msgcore-db/src/schema.ts"),
+    join(root, "services/msgcore/database/msgcore/sqlite/schema.d.ts"),
     "utf8",
   ),
   ts.ScriptTarget.Latest,
@@ -30,7 +30,7 @@ const declaration = source.statements.find(
 );
 assert(
   declaration && ts.isTypeLiteralNode(declaration.type),
-  "Expected the current Node database contract",
+  "Expected the current database contract",
 );
 const pascal = (value) =>
   value
@@ -154,7 +154,7 @@ try {
     `#nullable enable\n\nusing System.Diagnostics.CodeAnalysis;\nusing Microsoft.EntityFrameworkCore;\nusing MsgCore.AdapterSqlite.Entities;\n\nnamespace MsgCore.AdapterSqlite;\n\npublic sealed partial class MsgCoreDbContext : DbContext\n{\n    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Native publishing generates the EF compiled model and query interceptors; the native contract suite exercises them.")]\n    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Native publishing generates the EF compiled model and query interceptors; the native contract suite exercises them.")]\n    public MsgCoreDbContext(DbContextOptions<MsgCoreDbContext> options) : base(options) { }\n\n${entities.join("\n")}\n\n    protected override void OnModelCreating(ModelBuilder modelBuilder)\n    {\n${configurations.join("\n")}\n    }\n}\n`,
   );
   console.info(
-    `MsgCore: ${check ? "checked" : "generated"} ${entities.length} EF mappings against the Node contract and fresh Knex schema`,
+    `MsgCore: ${check ? "checked" : "generated"} ${entities.length} EF mappings against the database contract and fresh Knex schema`,
   );
 } finally {
   await teardownTestDatabase(database);
